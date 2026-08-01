@@ -1,0 +1,115 @@
+# =====================================================================
+# LOVELACE-DASHBOARD "Wetterstation" im SwitchBot-Look
+# Einfügen als neues Dashboard: Einstellungen -> Dashboards -> + ->
+# "Neues Dashboard aus YAML erstellen" -> Inhalt einfügen -> RAW bearbeiten
+#
+# Benötigt: Teil 1+2 (switchbot_dashboard_templates.yaml) bereits aktiv
+# Ersetze zusätzlich noch:
+#   weather.WETTERDIENST -> deine Wetter-Integration (z.B. weather.home)
+# =====================================================================
+
+title: Wetterstation
+views:
+  - title: Wetterstation
+    path: wetterstation
+    type: sections
+    max_columns: 2
+    sections:
+      # ---------------- HEADER: Datum & Uhrzeit ----------------
+      - type: grid
+        cards:
+          - type: markdown
+            content: >
+              ## {{ now().strftime('%A, %d. %B %Y') }}
+              ### {{ now().strftime('%H:%M') }}
+            card_mod:
+              style: |
+                ha-card { text-align: center; }
+
+      # ---------------- INNEN-BLOCK ----------------
+      - type: grid
+        cards:
+          - type: heading
+            heading: Innen
+            heading_style: title
+          - type: tile
+            entity: sensor.INNEN_TEMPERATUR
+            name: Temperatur
+            vertical: true
+            state_content:
+              - state
+          - type: tile
+            entity: sensor.INNEN_LUFTFEUCHTIGKEIT
+            name: Luftfeuchtigkeit
+            vertical: true
+            state_content:
+              - state
+          - type: tile
+            entity: sensor.innen_klimakomfort
+            name: Komfort
+            vertical: true
+            state_content:
+              - state
+          - type: tile
+            entity: sensor.innen_temperaturtrend
+            name: Trend
+            vertical: true
+            state_content:
+              - state
+
+      # ---------------- AUSSEN-BLOCK ----------------
+      - type: grid
+        cards:
+          - type: heading
+            heading: Außen
+            heading_style: title
+          - type: tile
+            entity: sensor.AUSSEN_TEMPERATUR
+            name: Temperatur
+            vertical: true
+            state_content:
+              - state
+          - type: tile
+            entity: sensor.AUSSEN_LUFTFEUCHTIGKEIT
+            name: Luftfeuchtigkeit
+            vertical: true
+            state_content:
+              - state
+          - type: tile
+            entity: sensor.aussen_klimakomfort
+            name: Komfort
+            vertical: true
+            state_content:
+              - state
+          - type: tile
+            entity: sensor.aussen_temperaturtrend
+            name: Trend
+            vertical: true
+            state_content:
+              - state
+
+      # ---------------- VORHERSAGE-ZEILE (wie SwitchBot 5-Tage-Leiste) ----------------
+      - type: grid
+        cards:
+          - type: heading
+            heading: Vorhersage
+            heading_style: title
+          - type: weather-forecast
+            entity: weather.WETTERDIENST
+            forecast_type: daily
+            show_current: false
+
+      # ---------------- BATTERIE-STATUS (optional, falls vorhanden) ----------------
+      # Ersetze durch deine echten Batterie-Entities, z.B. sensor.INNEN_SENSOR_BATTERY
+      # Falls dein SwitchBot-Sensor keine Batterie-Entity liefert, diese Sektion löschen.
+      - type: grid
+        cards:
+          - type: heading
+            heading: Sensor-Status
+            heading_style: subtitle
+          - type: tile
+            entity: sensor.INNEN_SENSOR_BATTERIE
+            name: Innen-Sensor Batterie
+          - type: tile
+            entity: sensor.AUSSEN_SENSOR_BATTERIE
+            name: Außen-Sensor Batterie

@@ -1,0 +1,108 @@
+# =====================================================================
+# TEIL 1: TEMPLATE-SENSOREN
+# In configuration.yaml einfügen (oder per !include), dann HA neu starten.
+#
+# Ersetze überall:
+#   sensor.INNEN_TEMPERATUR      -> deine Innen-Temperatur-Entity
+#   sensor.INNEN_LUFTFEUCHTIGKEIT -> deine Innen-Luftfeuchte-Entity
+#   sensor.AUSSEN_TEMPERATUR     -> deine Außen-Temperatur-Entity
+#   sensor.AUSSEN_LUFTFEUCHTIGKEIT -> deine Außen-Luftfeuchte-Entity
+# =====================================================================
+
+template:
+  - sensor:
+      # ---- Komfort-Smiley Innen (wie beim SwitchBot-Display) ----
+      - name: "Innen Klimakomfort"
+        unique_id: indoor_climate_comfort
+        state: >
+          {% set t = states('sensor.INNEN_TEMPERATUR') | float(0) %}
+          {% set h = states('sensor.INNEN_LUFTFEUCHTIGKEIT') | float(0) %}
+          {% if t < 18 %}Kalt
+          {% elif t > 28 %}Heiß
+          {% elif h < 30 %}Trocken
+          {% elif h > 70 %}Feucht
+          {% else %}Angenehm
+          {% endif %}
+        icon: >
+          {% set t = states('sensor.INNEN_TEMPERATUR') | float(0) %}
+          {% set h = states('sensor.INNEN_LUFTFEUCHTIGKEIT') | float(0) %}
+          {% if t < 18 %}mdi:emoticon-cool-outline
+          {% elif t > 28 %}mdi:emoticon-sick-outline
+          {% elif h < 30 %}mdi:water-off-outline
+          {% elif h > 70 %}mdi:water-outline
+          {% else %}mdi:emoticon-happy-outline
+          {% endif %}
+
+      # ---- Komfort-Smiley Außen ----
+      - name: "Außen Klimakomfort"
+        unique_id: outdoor_climate_comfort
+        state: >
+          {% set t = states('sensor.AUSSEN_TEMPERATUR') | float(0) %}
+          {% set h = states('sensor.AUSSEN_LUFTFEUCHTIGKEIT') | float(0) %}
+          {% if t < 5 %}Kalt
+          {% elif t > 30 %}Heiß
+          {% elif h < 30 %}Trocken
+          {% elif h > 80 %}Feucht
+          {% else %}Angenehm
+          {% endif %}
+        icon: >
+          {% set t = states('sensor.AUSSEN_TEMPERATUR') | float(0) %}
+          {% set h = states('sensor.AUSSEN_LUFTFEUCHTIGKEIT') | float(0) %}
+          {% if t < 5 %}mdi:emoticon-cool-outline
+          {% elif t > 30 %}mdi:emoticon-sick-outline
+          {% elif h < 30 %}mdi:water-off-outline
+          {% elif h > 80 %}mdi:water-outline
+          {% else %}mdi:emoticon-happy-outline
+          {% endif %}
+
+      # ---- Trend-Pfeile (nutzen die derivative-Sensoren aus Teil 2) ----
+      - name: "Innen Temperaturtrend"
+        unique_id: indoor_temp_trend
+        state: >
+          {% set d = states('sensor.innen_temp_trend_roh') | float(0) %}
+          {% if d > 0.3 %}steigend
+          {% elif d < -0.3 %}fallend
+          {% else %}stabil
+          {% endif %}
+        icon: >
+          {% set d = states('sensor.innen_temp_trend_roh') | float(0) %}
+          {% if d > 0.3 %}mdi:trending-up
+          {% elif d < -0.3 %}mdi:trending-down
+          {% else %}mdi:trending-neutral
+          {% endif %}
+
+      - name: "Außen Temperaturtrend"
+        unique_id: outdoor_temp_trend
+        state: >
+          {% set d = states('sensor.aussen_temp_trend_roh') | float(0) %}
+          {% if d > 0.3 %}steigend
+          {% elif d < -0.3 %}fallend
+          {% else %}stabil
+          {% endif %}
+        icon: >
+          {% set d = states('sensor.aussen_temp_trend_roh') | float(0) %}
+          {% if d > 0.3 %}mdi:trending-up
+          {% elif d < -0.3 %}mdi:trending-down
+          {% else %}mdi:trending-neutral
+          {% endif %}
+
+# =====================================================================
+# TEIL 2: ROH-TRENDSENSOREN (derivative platform)
+# Berechnen die Änderungsrate über die letzte Stunde -> Basis für Teil 1
+# =====================================================================
+sensor:
+  - platform: derivative
+    source: sensor.INNEN_TEMPERATUR
+    name: "Innen Temp Trend Roh"
+    unique_id: innen_temp_trend_roh
+    time_window: "01:00:00"
+    unit_time: h
+    round: 2
+
+  - platform: derivative
+    source: sensor.AUSSEN_TEMPERATUR
+    name: "Außen Temp Trend Roh"
+    unique_id: aussen_temp_trend_roh
+    time_window: "01:00:00"
+    unit_time: h
+    round: 2

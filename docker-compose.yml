@@ -1,0 +1,29 @@
+services:
+  homeassistant:
+    container_name: homeassistant
+    image: ghcr.io/home-assistant/home-assistant:stable
+    volumes:
+      - ./config:/config
+      - /etc/localtime:/etc/localtime:ro
+    restart: unless-stopped
+    privileged: true
+    network_mode: host
+
+  tailscale:
+    container_name: tailscale-homeassistant
+    image: tailscale/tailscale:latest
+    hostname: homeassistant
+    environment:
+      - TS_AUTHKEY=${TS_AUTHKEY?Variable not set}
+      - TS_STATE_DIR=/var/lib/tailscale
+    volumes:
+      - tailscale-state:/var/lib/tailscale
+      - /dev/net/tun:/dev/net/tun
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    network_mode: host
+    restart: unless-stopped
+
+volumes:
+  tailscale-state:
