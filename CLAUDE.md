@@ -28,6 +28,17 @@ Zwei physische Standorte mit eigener Hardware:
 
 **Offene Entscheidung:** Eine gemeinsame HA-Instanz mit VPN zwischen den Standorten, oder zwei getrennte Instanzen (aktuell eher letzteres empfohlen, da keine stabile VPN-Verbindung zwischen den Netzwerken besteht). Ausschlaggebend war ein früherer UUID-Konflikt zwischen der Haupt-HA-Instanz und der eingebetteten HA-Instanz im SwitchBot AI Hub, der einen Factory-Reset des Hubs nötig machte.
 
+### VPN-Zugang zum Wannsee-Router (WireGuard, 2026-08-05)
+- **Router:** Telekom Speedport (Smart 4/Pro-Klasse) mit eingebautem WireGuard-Server unter **Netzwerk → Virtuelles Netz (VPN)**. Endpoint: `berlin.privatemind.de:53280` (DynDNS-Hostname, nicht die rohe IP verwenden – die kann wechseln).
+- **Speedport-Eigenheiten, die vom Standard-WireGuard-Workflow abweichen:**
+  - Es gibt **kein „Peer mit eigenem Public Key hinzufügen“** – der Router generiert pro VPN-Zugang ein komplettes Client-Config (inkl. Private Key) selbst, ausgegeben als QR-Code + einmaliger Download-Link. Eigene Schlüssel lassen sich nicht einspeisen.
+  - Die Config-Datei ist **nur direkt bei der Erstellung herunterladbar**, danach nicht erneut abrufbar – bei Verlust muss ein neuer Zugang angelegt werden.
+  - Speedport Smart 3 erlaubt nur **einen** gleichzeitigen VPN-Zugang; Smart 4/Pro mehrere parallel (unser Fall).
+  - Generierte Configs sind standardmäßig **Full-Tunnel** (`AllowedIPs = 0.0.0.0/0`) – auf Split-Tunnel (`AllowedIPs = 192.168.1.0/24, 10.200.200.0/24`, Wannsee-LAN + Tunnelnetz) umgestellt, sonst reißt ein toter/fehlkonfigurierter Tunnel den gesamten Internetzugriff des Clients mit.
+- **Fallstrick, der zum Debugging-Anlass wurde:** Ein WireGuard-Profil 1:1 (gleicher Private Key) vom MacBook auf den Mac Mini kopiert funktionierte scheinbar (Interface „up“), aber **kein einziges Paket kam zurück** (`Ipkts: 0`) – der Router kennt pro Config einen eigenen Peer und schickt Antworten an den zuletzt aktiven Endpoint (MacBook), nicht an den Klon. Jedes Gerät braucht einen **eigenen, separat am Router erzeugten VPN-Zugang** (eigene Adresse im Tunnelnetz, z.B. MacBook `10.200.200.1`, Mac Mini `10.200.200.2`).
+- **iPhone-Zugang** funktionierte durchgehend, weil er ein eigenes Profil nutzt – kein Konflikt.
+- Aktiver Tunnel-Name auf dem Mac Mini in der WireGuard-App: **„MacMini“**. Router-Interface darüber erreichbar unter `https://192.168.1.1`.
+
 ## Geräteinventar & Integrationsstrategie
 
 ### Zigbee-Heizkörperthermostate (9 Stück)
