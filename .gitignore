@@ -1,0 +1,6 @@
+.env
+/config.bak
+/config/
+mosquitto/data/
+mosquitto/log/
+zigbee2mqtt/data/

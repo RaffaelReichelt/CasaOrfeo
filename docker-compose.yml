@@ -25,5 +25,30 @@ services:
     network_mode: host
     restart: unless-stopped
 
+  mosquitto:
+    container_name: mosquitto
+    image: eclipse-mosquitto:latest
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./mosquitto/config:/mosquitto/config
+      - ./mosquitto/data:/mosquitto/data
+      - ./mosquitto/log:/mosquitto/log
+
+  zigbee2mqtt:
+    container_name: zigbee2mqtt
+    image: koenkk/zigbee2mqtt:latest
+    restart: unless-stopped
+    depends_on:
+      - mosquitto
+    environment:
+      - TZ=Europe/Berlin
+    volumes:
+      - ./zigbee2mqtt/data:/app/data
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - "8099:8080"
+
 volumes:
   tailscale-state:
