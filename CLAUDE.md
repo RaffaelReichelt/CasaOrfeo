@@ -1,9 +1,21 @@
 # Home Assistant Neuaufbau – Projektkontext
 
 ## Umgebung
-- Home Assistant läuft als **Docker-Container** (nicht HA OS/Supervised) auf einem **GX10**
+- Home Assistant läuft als **Docker-Container** (nicht HA OS/Supervised), Host: **Mac Mini** (umgezogen von einem GX10, siehe „Migration" unten) – Docker-Runtime dort: **Docker Desktop**
 - Kein Add-on Store verfügbar – zusätzliche Dienste (MQTT, Zigbee2MQTT) müssen als eigene Docker-Container laufen
 - Ziel: kompletter Neuaufbau der Konfiguration, saubere Struktur von Anfang an
+- Stack: `homeassistant` + `tailscale` (Sidecar, `network_mode: host`) + `mosquitto` + `zigbee2mqtt`, siehe [docker-compose.yml](docker-compose.yml)
+
+### Migration GX10 → Mac Mini (2026-08-05)
+- **Grund:** GX10 ist für Privatemind reserviert, HA gehört fachlich nicht dorthin.
+- **Docker-Desktop-Settings, die auf dem Mac Mini gesetzt sein müssen** (sonst Instabilität/Ausfälle):
+  - *„Enable Resource Saver"* **deaktiviert** – sonst pausiert Docker Desktop die VM bei Inaktivität und HA reagiert nicht mehr auf Automationen.
+  - *„Start Docker Desktop when you log in"* **aktiviert**, plus automatischer macOS-Login – anders als beim GX10 läuft der Docker-Daemon hier nicht ohne eingeloggten Nutzer.
+  - macOS-Ruhezustand deaktiviert (`pmset -a sleep 0`), feste IP/DHCP-Reservierung für den Mac Mini.
+- **Netzwerk:** `network_mode: host` ist unter Docker Desktop/macOS nur experimentell (Settings → Resources → Network → „Enable host networking", ab 4.29+) und Multicast (mDNS/SSDP für Hue-/Apple-TV-Discovery) verhält sich anders als unter Linux. Alle bestehenden Integrationen (Hue, Samsung TV, Apple TV) nutzen gespeicherte IPs/Credentials aus `.storage/` und brauchen daher im laufenden Betrieb keine erneute Discovery – nur bei Neu-Pairing relevant. Zigbee2MQTT braucht kein Host-Networking (reine TCP-Verbindung zur SLZB-06, kein Broadcast).
+  - Fallback falls Host-Networking Probleme macht: HA auf Bridge-Networking mit `ports: ["8123:8123"]` umstellen (Details siehe Chatverlauf vom 2026-08-05).
+- **Tailscale-Identität** bleibt erhalten, wenn das Docker-Volume `tailscale-state` mit umgezogen wird (kein neuer `TS_AUTHKEY` nötig).
+- **Git-Vorsicht (wichtig, hat schon einmal einen Push blockiert):** `config/` (HA-Config inkl. `.storage/` mit OAuth-Tokens/Cookies/Auth-Hashes), `mosquitto/data/`, `mosquitto/log/` und `zigbee2mqtt/data/` (enthält den Zigbee-`network_key`!) sind in `.gitignore` und **dürfen nie committet werden**. Beim Umzug/Kopieren der Daten auf den Mac Mini nicht versehentlich per `git add .` wieder einfangen.
 
 ## Standorte
 Zwei physische Standorte mit eigener Hardware:
