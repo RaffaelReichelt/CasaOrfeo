@@ -33,29 +33,32 @@ views:
           - state
         days_to_show: 7
 
-      # NEU seit 2026-08-10, ging beim OBI-Sensor nie: echte Momentan-
-      # leistung. sensor.obi_energy_bridge_aktuelle_leistung war dauerhaft
-      # "unavailable" (siehe CLAUDE.md/Session-Log) - der bitShake-Zähler
-      # liefert sensor.stromzaehler_leistung (W) zuverlässig alle 10s direkt
-      # vom SML-Optokopf, kein Umweg über einen "change"-Balken mehr nötig.
-      # history-graph statt statistics-graph, weil hier die tatsächlichen
-      # Rohwerte (measurement, alle 10s) interessieren, nicht 5-Min-
-      # Aggregate.
+      # Momentanleistung: sensor.stromzaehler_leistung liegt technisch bereit
+      # (bitShake-Zähler liefert MT174.Power alle 10s), zeigt aber Stand
+      # 2026-08-10 durchgehend 0 W. Grund laut Nutzer: die "erweiterte"
+      # SML-Datensatzvariante mit echter Momentanleistung ist beim Messstellen-
+      # betreiber PIN-gesperrt (nur der öffentliche Teil mit den kumulierten
+      # Zählerständen ist ohne PIN lesbar) - Aktivierung/PIN-Anfrage steht
+      # noch aus, kein Bug. Karte bleibt trotzdem stehen: sobald der PIN
+      # aktiviert ist, füllt sie sich ohne weitere Dashboard-Änderung.
       - type: history-graph
         title: Momentanleistung
         entities:
           - sensor.stromzaehler_leistung
         hours_to_show: 3
 
-      # "days_to_show" kennt kein Stunden-Pendant - 1/24 als Bruchteil
-      # eines Tages für "letzte Stunde" verwendet; nicht offiziell
-      # dokumentiert, im Zweifel hochsetzen falls die Karte leer bleibt.
-      - type: statistics-graph
-        title: Verbrauch letzte Stunde (Differenz zum letzten Messpunkt)
-        chart_type: bar
+      # "Verbrauch letzte Stunde" (2026-08-10 überarbeitet, ursprünglich ein
+      # 5-Minuten-"change"-Balkendiagramm). HAs Kurzzeit-Statistik kann nicht
+      # feiner als 5-Minuten-Buckets - feste Grenze im Recorder, keine
+      # Konfigurationsoption. Für eine Minuten-Auflösung stattdessen der
+      # native "statistics"-Sensor sensor.verbrauch_letzte_minute
+      # (configuration.yaml, state_characteristic: change, max_age: 1 Min) -
+      # rechnet laufend "wieviel Wh kamen in der letzten Minute dazu" direkt
+      # aus den ~alle 10s eintreffenden Rohwerten, ohne 5-Minuten-Rundung.
+      # history-graph statt statistics-graph, da hier wieder die tatsächlichen
+      # Rohwerte interessieren, nicht aggregierte Statistik-Buckets.
+      - type: history-graph
+        title: Verbrauch letzte Stunde (pro Minute kumuliert)
         entities:
-          - sensor.stromzahler_gesamt_wh
-        period: 5minute
-        stat_types:
-          - change
-        days_to_show: 0.0417
+          - sensor.verbrauch_letzte_minute
+        hours_to_show: 1
