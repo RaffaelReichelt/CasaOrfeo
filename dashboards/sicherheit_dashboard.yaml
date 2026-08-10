@@ -55,25 +55,13 @@
 # (bestätigt, im Gegensatz zu <div>/<span>/<style>), nur eben MIT target.
 #
 # TÜRKONTAKTE (Söller, Eingangstür, Haustür, Haustür Wannsee, Wintergarten):
-# Sensoren sind Tuya/Smart Life-Geräte, aktuell nur über Alexa eingebunden,
-# noch NICHT in HA. Einmaliger manueller Schritt nötig, bevor die Tile-
-# Karten unten funktionieren (Platzhalter-Entity-IDs in GROSSBUCHSTABEN,
-# wie schon in switchbot_dashboard_templates.yaml):
-#
-#   1. https://iot.tuya.com -> Account anlegen (falls noch nicht vorhanden)
-#      -> Cloud -> "Create Cloud Project" (Data Center: "Central Europe
-#      Data Center" für Deutschland, sonst finden sich die Geräte nicht)
-#   2. Im Projekt unter "Devices" -> "Link Tuya App Account" -> QR-Code mit
-#      der Smart Life App scannen (Account, an dem die 5 Türsensoren hängen)
-#      -> Geräte sollten danach unter "All Devices" auftauchen
-#   3. Unter "Cloud" -> Projekt -> "Overview": Access ID (Client ID) und
-#      Access Secret (Client Secret) notieren
-#   4. In HA: Einstellungen -> Geräte & Dienste -> Integration hinzufügen
-#      -> "Tuya" -> Access ID + Access Secret eintragen -> Region "Central
-#      Europe" -> per Smart-Life-Account-Login autorisieren
-#   5. Nach dem Pairing: die 5 GROSSGESCHRIEBENEN Platzhalter unten durch
-#      die echten binary_sensor.*-Entity-IDs ersetzen (Einstellungen ->
-#      Geräte & Dienste -> Entitäten -> nach "tür"/"contact" filtern)
+# Tuya/Smart-Life-Geräte über die Tuya-Cloud-Integration (Schritt-für-Schritt
+# war hier früher dokumentiert, Pairing inzwischen erledigt). Stand 2026-08-10:
+# 3 von 5 real gepairt und mit Historie (Söller/Terrasse, Eingangstür,
+# Haustür) - binary_sensor.haustur_wannsee* und binary_sensor.wintergarten_tur*
+# existieren noch NICHT (per direkter DB-Abfrage verifiziert, nicht nur
+# angenommen), bleiben unten als vorausschauende Platzhalter stehen und
+# fangen einfach an zu funktionieren, sobald das Pairing nachgeholt wird.
 # =====================================================================
 
 title: Sicherheit
@@ -145,58 +133,84 @@ views:
           - type: heading
             heading: Türkontakte
             heading_style: title
-          - type: entities
-            title: Söller
-            entities:
-              - entity: binary_sensor.terrasse_tur
-                name: Tür
-              - entity: binary_sensor.terrasse_tamper
-                name: Tamper
-              - entity: sensor.terrasse_batterie
-                name: Batterie
+          # Ereignishistorie über alle Türkontakte (2026-08-10): native
+          # "logbook"-Karte statt eines eigenen Sensors wie bei den Kamera-
+          # Ereignissen oben - hier gibt es keine Video-Datei zu verlinken,
+          # nur Zustandswechsel (auf/zu, Tamper), dafür reicht HAs eingebautes
+          # Logbook. hours_to_show bewusst hoch (7 Tage), weil die Türen nicht
+          # ständig auslösen und ein 24h-Fenster oft leer wäre. Haustür
+          # Wannsee/Wintergarten sind hier schon mit aufgeführt, obwohl noch
+          # nicht gepairt (siehe Kommentar oben) - erscheinen einfach erst,
+          # sobald das Pairing nachgeholt ist, kein Fehler bis dahin.
+          # Layout 2026-08-10: Logbook wandert von "oben, volle Breite,
+          # rows: 4" in eine eigene rechte Spalte neben die 5 Tür-Karten
+          # (die dafür in einen vertical-stack links wandern) - dadurch
+          # ist die Liste nicht mehr auf 4 feste Grid-Zeilen gedeckelt,
+          # sondern nimmt die volle Höhe der linken Spalte ein (5 gestapelte
+          # entities-Karten sind deutlich höher als die alten 4 Grid-Zeilen).
+          - type: horizontal-stack
             grid_options:
               columns: full
-          - type: entities
-            title: Eingangstür
-            entities:
-              - entity: binary_sensor.eingangstur_tur
-                name: Tür
-              - entity: binary_sensor.eingangstur_tamper
-                name: Tamper
-              - entity: sensor.eingangstur_batterie
-                name: Batterie
-            grid_options:
-              columns: full
-          - type: entities
-            title: Haustür
-            entities:
-              - entity: binary_sensor.haustur_tur
-                name: Tür
-              - entity: binary_sensor.haustur_tamper
-                name: Tamper
-              - entity: sensor.haustur_batterie
-                name: Batterie
-            grid_options:
-              columns: full
-          - type: entities
-            title: Haustür Wannsee
-            entities:
-              - entity: binary_sensor.haustur_wannsee
-                name: Tür
-              - entity: binary_sensor.haustur_wannsee_tamper
-                name: Tamper
-              - entity: sensor.haustur_wannsee_batterie
-                name: Batterie
-            grid_options:
-              columns: full
-          - type: entities
-            title: Wintergarten
-            entities:
-              - entity: binary_sensor.wintergarten_tur
-                name: Tür
-              - entity: binary_sensor.wintergarten_tamper
-                name: Tamper
-              - entity: sensor.wintergarten_batterie
-                name: Batterie
-            grid_options:
-              columns: full
+              rows: 10
+            cards:
+              - type: vertical-stack
+                cards:
+                  - type: entities
+                    title: Söller
+                    entities:
+                      - entity: binary_sensor.terrasse_tur
+                        name: Tür
+                      - entity: binary_sensor.terrasse_tamper
+                        name: Tamper
+                      - entity: sensor.terrasse_batterie
+                        name: Batterie
+                  - type: entities
+                    title: Eingangstür
+                    entities:
+                      - entity: binary_sensor.eingangstur_tur
+                        name: Tür
+                      - entity: binary_sensor.eingangstur_tamper
+                        name: Tamper
+                      - entity: sensor.eingangstur_batterie
+                        name: Batterie
+                  - type: entities
+                    title: Haustür
+                    entities:
+                      - entity: binary_sensor.haustur_tur
+                        name: Tür
+                      - entity: binary_sensor.haustur_tamper
+                        name: Tamper
+                      - entity: sensor.haustur_batterie
+                        name: Batterie
+                  - type: entities
+                    title: Haustür Wannsee
+                    entities:
+                      - entity: binary_sensor.haustur_wannsee
+                        name: Tür
+                      - entity: binary_sensor.haustur_wannsee_tamper
+                        name: Tamper
+                      - entity: sensor.haustur_wannsee_batterie
+                        name: Batterie
+                  - type: entities
+                    title: Wintergarten
+                    entities:
+                      - entity: binary_sensor.wintergarten_tur
+                        name: Tür
+                      - entity: binary_sensor.wintergarten_tamper
+                        name: Tamper
+                      - entity: sensor.wintergarten_batterie
+                        name: Batterie
+              - type: logbook
+                title: Ereignisse Türkontakte
+                hours_to_show: 168
+                entities:
+                  - binary_sensor.terrasse_tur
+                  - binary_sensor.terrasse_tamper
+                  - binary_sensor.eingangstur_tur
+                  - binary_sensor.eingangstur_tamper
+                  - binary_sensor.haustur_tur
+                  - binary_sensor.haustur_tamper
+                  - binary_sensor.haustur_wannsee
+                  - binary_sensor.haustur_wannsee_tamper
+                  - binary_sensor.wintergarten_tur
+                  - binary_sensor.wintergarten_tamper

@@ -5,7 +5,15 @@
 # docker-compose.yml (dashboards/-Verzeichnis-Mount, siehe CLAUDE.md für
 # den Hintergrund zum Verzeichnis- vs. Einzeldatei-Mount). Bearbeiten +
 # Browser-Reload genügt, kein RAW-Editor-Copy-Paste mehr nötig.
-# 1:1 übernommen aus dem alten .storage/lovelace.energie-details.
+#
+# UMBAU 2026-08-10: OBI Energy Tracker (Cloud-Backend, siehe ausführliche
+# Ausfall-Historie in CLAUDE.md/Session-Log) ersetzt durch den "bitShake
+# SmartMeterReader" - ein Tasmota-ESP32 mit SML-Optokopf, liest denselben
+# Zähler lokal per MQTT aus, kein Cloud-Umweg mehr. Karten unten zeigen
+# jetzt sensor.stromzaehler_* statt sensor.obi_*. Die OBI-Sensoren/-
+# Integration bleiben in configuration.yaml/als Config-Entry bestehen
+# (nicht gelöscht, nur nicht mehr im Dashboard verdrahtet) - falls der
+# bitShake-Zähler mal Probleme macht, ist der alte Weg noch reaktivierbar.
 # =====================================================================
 
 title: Energie-Details
@@ -19,48 +27,34 @@ views:
       - type: statistics-graph
         title: Stromverbrauch (5-Minuten-Auflösung)
         entities:
-          - sensor.obi_energy_bridge_verbrauch_kwh
+          - sensor.stromzaehler_gesamt
         period: 5minute
         stat_types:
           - state
         days_to_show: 7
-      # Ersetzt die alte "Momentanleistung"-Karte (sensor.obi_energy_bridge_
-      # aktuelle_leistung liefert dauerhaft keine Werte, siehe CLAUDE.md/
-      # Session-Historie 2026-08-09 - Bridge online, aber keine Impulse vom
-      # Zähler-Lesekopf mehr).
-      #
-      # 2026-08-09, drei Anläufe bis hierhin:
-      #  1. "change" direkt auf dem Rohsensor -> funktionierte, ABER die
-      #     einmalige Nachhol-Spitze nach dem 18h-Ausfall (~7,46 kWh auf
-      #     einen Schlag) verhagelte die Skala, solange sie im "letzte
-      #     Stunde"-Fenster lag.
-      #  2. Eigener Trigger-Sensor "sensor.obi_verbrauch_wh_bereinigt"
-      #     (configuration.yaml) gebaut, der Zeitlücken >20 Min auf 0 setzt.
-      #     Funktionierte anfangs, blieb aber zweimal reproduzierbar nach
-      #     ein paar Übergängen hängen (kein Trigger mehr, kein Fehler im
-      #     Log) - ungeklärter Bug, nicht weiter verfolgt.
-      #  3. ZURÜCK zu Lösung 1 ("change" auf dem Rohsensor): Die Nachhol-
-      #     Spitze ist inzwischen (mehrere Stunden her) sowieso außerhalb
-      #     jedes "letzte Stunde"-Fensters - der ganze Umweg über den
-      #     Custom-Sensor war nur nötig, SOLANGE die Spitze noch aktuell
-      #     war. Einfachste, robusteste Lösung gewinnt.
-      #  4. "unit: Wh" als Karten-Override versucht, um kWh->Wh anzuzeigen -
-      #     hat nicht funktioniert (Karte blieb bei kWh). Beim Nachlesen im
-      #     Frontend-Code stellte sich raus: dieses Feld sucht nur unter
-      #     bereits vorhandenen Einheiten mehrerer Entities nach einer
-      #     Übereinstimmung, rechnet nicht wirklich um. Stattdessen jetzt
-      #     "sensor.obi_zaehlerstand_wh" (configuration.yaml) - simpler
-      #     state-basierter Sensor, der den Zählerstand nativ in Wh führt,
-      #     kein Karten-Trick mehr nötig.
-      #
+
+      # NEU seit 2026-08-10, ging beim OBI-Sensor nie: echte Momentan-
+      # leistung. sensor.obi_energy_bridge_aktuelle_leistung war dauerhaft
+      # "unavailable" (siehe CLAUDE.md/Session-Log) - der bitShake-Zähler
+      # liefert sensor.stromzaehler_leistung (W) zuverlässig alle 10s direkt
+      # vom SML-Optokopf, kein Umweg über einen "change"-Balken mehr nötig.
+      # history-graph statt statistics-graph, weil hier die tatsächlichen
+      # Rohwerte (measurement, alle 10s) interessieren, nicht 5-Min-
+      # Aggregate.
+      - type: history-graph
+        title: Momentanleistung
+        entities:
+          - sensor.stromzaehler_leistung
+        hours_to_show: 3
+
       # "days_to_show" kennt kein Stunden-Pendant - 1/24 als Bruchteil
-      # eines Tages für "letzte Stunde" versucht; nicht offiziell
+      # eines Tages für "letzte Stunde" verwendet; nicht offiziell
       # dokumentiert, im Zweifel hochsetzen falls die Karte leer bleibt.
       - type: statistics-graph
         title: Verbrauch letzte Stunde (Differenz zum letzten Messpunkt)
         chart_type: bar
         entities:
-          - sensor.obi_zahlerstand_wh
+          - sensor.stromzahler_gesamt_wh
         period: 5minute
         stat_types:
           - change
