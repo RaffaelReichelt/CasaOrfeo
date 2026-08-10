@@ -47,18 +47,23 @@ views:
           - sensor.stromzaehler_leistung
         hours_to_show: 3
 
-      # "Verbrauch letzte Stunde" (2026-08-10 überarbeitet, ursprünglich ein
-      # 5-Minuten-"change"-Balkendiagramm). HAs Kurzzeit-Statistik kann nicht
-      # feiner als 5-Minuten-Buckets - feste Grenze im Recorder, keine
-      # Konfigurationsoption. Für eine Minuten-Auflösung stattdessen der
-      # native "statistics"-Sensor sensor.verbrauch_letzte_minute
-      # (configuration.yaml, state_characteristic: change, max_age: 1 Min) -
-      # rechnet laufend "wieviel Wh kamen in der letzten Minute dazu" direkt
-      # aus den ~alle 10s eintreffenden Rohwerten, ohne 5-Minuten-Rundung.
-      # history-graph statt statistics-graph, da hier wieder die tatsächlichen
-      # Rohwerte interessieren, nicht aggregierte Statistik-Buckets.
+      # "Verbrauch letzte Stunde" (2026-08-10 zweimal überarbeitet):
+      #  1. Ursprünglich ein 5-Minuten-"change"-Balkendiagramm (HAs Kurzzeit-
+      #     Statistik kann nicht feiner - feste Grenze im Recorder, keine
+      #     Konfigurationsoption).
+      #  2. Dann ein 1-Minuten-Zeitfenster-Sensor (sampling per max_age).
+      #  3. Jetzt eine echte Kurve mit ~10s-Auflösung: sensor.stromzahler_
+      #     differenz_pro_messwert (configuration.yaml, nativer "statistics"-
+      #     Sensor, state_characteristic: change, sampling_size: 2 statt
+      #     Zeitfenster) vergleicht bei jedem neuen Messwert vom Zähler
+      #     einfach nur den aktuellen mit dem direkt vorherigen Wert - die
+      #     rohe Differenz zwischen zwei aufeinanderfolgenden ~10s-Ticks.
+      #     history-graph statt statistics-graph, da die tatsächlichen
+      #     Rohwerte interessieren, nicht aggregierte Statistik-Buckets.
+      #     Direkt nach einem HA-Neustart kann der erste Wert kurz unsinnig
+      #     ausfallen (leerer Sample-Puffer, kein Bug, siehe configuration.yaml).
       - type: history-graph
-        title: Verbrauch letzte Stunde (pro Minute kumuliert)
+        title: Verbrauch – Differenz je Messwert (~10s)
         entities:
-          - sensor.verbrauch_letzte_minute
+          - sensor.stromzahler_differenz_pro_messwert
         hours_to_show: 1
