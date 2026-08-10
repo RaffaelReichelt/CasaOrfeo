@@ -71,3 +71,18 @@ views:
         entities:
           - sensor.stromzahler_differenz_bereinigt
         hours_to_show: 1
+
+      # "Näherungsleistung" (2026-08-10, spaßeshalber) - Watt-Näherung aus der
+      # Wh-Differenz zwischen zwei Messwerten, aber mit der ECHTEN Zeit-
+      # differenz zwischen den Ticks (statistics-Charakteristik "change_second"
+      # statt einer pauschalen /10s-Annahme, siehe sensor.stromzahler_
+      # naherungsleistung in configuration.yaml). So lange die echte
+      # Momentanleistung (Karte oben) noch PIN-gesperrt ist, gibt das schon
+      # mal eine ungefähre Vorschau - kein Ersatz für die echte Messung
+      # (die ist eine Augenblicksmessung des Zählers selbst, das hier ist
+      # eine über das jeweilige Tick-Intervall gemittelte Näherung).
+      - type: history-graph
+        title: Näherungsleistung (aus Wh-Differenz)
+        entities:
+          - sensor.stromzahler_naherungsleistung
+        hours_to_show: 1
