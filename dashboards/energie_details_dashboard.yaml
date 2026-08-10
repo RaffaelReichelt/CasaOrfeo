@@ -60,10 +60,14 @@ views:
       #     rohe Differenz zwischen zwei aufeinanderfolgenden ~10s-Ticks.
       #     history-graph statt statistics-graph, da die tatsächlichen
       #     Rohwerte interessieren, nicht aggregierte Statistik-Buckets.
-      #     Direkt nach einem HA-Neustart kann der erste Wert kurz unsinnig
-      #     ausfallen (leerer Sample-Puffer, kein Bug, siehe configuration.yaml).
+      #  4. Der Anlauf-Ausreißer direkt nach einem HA-Neustart (leerer Sample-
+      #     Puffer, einmal 177 Wh statt der üblichen 1-4 Wh beobachtet) hat
+      #     die y-Achse verhagelt - deshalb zeigt die Karte jetzt
+      #     sensor.stromzahler_differenz_bereinigt (configuration.yaml,
+      #     einfaches Wertgrenzen-Filter-Template, kein Trigger) statt der
+      #     rohen Statistics-Sensor-Entity direkt.
       - type: history-graph
         title: Verbrauch – Differenz je Messwert (~10s)
         entities:
-          - sensor.stromzahler_differenz_pro_messwert
+          - sensor.stromzahler_differenz_bereinigt
         hours_to_show: 1
