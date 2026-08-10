@@ -1,0 +1,140 @@
+# =====================================================================
+# LOVELACE-DASHBOARD "SwitchBot Meter"
+# Läuft als YAML-Dashboard direkt von der Platte (siehe configuration.yaml
+# + docker-compose.yml, dashboards/-Verzeichnis-Mount) -> Bearbeiten +
+# Browser-Reload genügt, kein RAW-Editor-Copy-Paste nötig.
+#
+# "Kleine" Wetterstation (SwitchBot Meter, Innen-/Außenthermometer über
+# die switchbot_cloud-Integration) - anders als Tuya-Wetterstation und
+# Netatmo NUR Temperatur/Luftfeuchte/Batterie, kein Wind/Regen/Druck/CO2.
+# Entsprechend schlankeres Dashboard als die beiden anderen.
+#
+# VPD+Taupunkt nach gleicher Magnus-Formel wie bei den anderen beiden
+# Stationen berechnet (eigene "SwitchBot ..."-Sensoren, Kollisionsschutz
+# gegenüber den gleichnamigen Innen/Außen-Sensoren der anderen Stationen).
+#
+# Prognose nutzt dieselbe weather.forecast_home-Entity (Met.no, Dresden)
+# wie die anderen beiden Wetter-Dashboards - ein Standort, eine Quelle.
+#
+# Akkustatus ist hier sinnvoll (wie bei Netatmo) - SwitchBot liefert echte
+# Prozentwerte.
+# =====================================================================
+
+title: SwitchBot Meter
+views:
+  - title: SwitchBot Meter
+    path: switchbot-meter
+    type: sections
+    max_columns: 2
+    sections:
+      # ---------------- PROGNOSE ----------------
+      - type: grid
+        cards:
+          - type: heading
+            heading: Prognose
+            heading_style: title
+          - type: weather-forecast
+            entity: weather.forecast_home
+            forecast_type: daily
+            show_current: true
+            grid_options:
+              columns: full
+              rows: 4
+
+      # ---------------- INNEN ----------------
+      - type: grid
+        cards:
+          - type: heading
+            heading: Innen
+            heading_style: title
+          - type: horizontal-stack
+            grid_options:
+              columns: full
+              rows: 1
+            cards:
+              - type: tile
+                entity: sensor.innenthermometer_temperatur
+                name: Temperatur
+              - type: tile
+                entity: sensor.innenthermometer_luftfeuchtigkeit
+                name: Luftfeuchtigkeit
+          - type: horizontal-stack
+            grid_options:
+              columns: full
+              rows: 1
+            cards:
+              - type: tile
+                entity: sensor.switchbot_innen_taupunkt
+                name: Taupunkt
+              - type: tile
+                entity: sensor.switchbot_innen_spread
+                name: Spread
+          - type: horizontal-stack
+            grid_options:
+              columns: full
+              rows: 1
+            cards:
+              - type: tile
+                entity: sensor.switchbot_innen_vpd
+                name: VPD (Pflanzen)
+                state_content:
+                  - state
+                  - empfehlung
+
+      # ---------------- AUSSEN ----------------
+      - type: grid
+        cards:
+          - type: heading
+            heading: Außen
+            heading_style: title
+          - type: horizontal-stack
+            grid_options:
+              columns: full
+              rows: 1
+            cards:
+              - type: tile
+                entity: sensor.aussenthermometer_temperatur
+                name: Temperatur
+              - type: tile
+                entity: sensor.aussenthermometer_luftfeuchtigkeit
+                name: Luftfeuchtigkeit
+          - type: horizontal-stack
+            grid_options:
+              columns: full
+              rows: 1
+            cards:
+              - type: tile
+                entity: sensor.switchbot_aussen_taupunkt
+                name: Taupunkt
+              - type: tile
+                entity: sensor.switchbot_aussen_spread
+                name: Spread
+          - type: horizontal-stack
+            grid_options:
+              columns: full
+              rows: 1
+            cards:
+              - type: tile
+                entity: sensor.switchbot_aussen_vpd
+                name: VPD (Pflanzen)
+                state_content:
+                  - state
+                  - empfehlung
+
+      # ---------------- AKKUSTATUS ----------------
+      - type: grid
+        cards:
+          - type: heading
+            heading: Akkustatus
+            heading_style: title
+          - type: horizontal-stack
+            grid_options:
+              columns: full
+              rows: 1
+            cards:
+              - type: tile
+                entity: sensor.innenthermometer_batterie
+                name: Innen
+              - type: tile
+                entity: sensor.aussenthermometer_batterie
+                name: Außen

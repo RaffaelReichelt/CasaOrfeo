@@ -1,0 +1,202 @@
+# =====================================================================
+# LOVELACE-DASHBOARD "Sicherheit" – nur die Live-Bilder beider Kameras
+#
+# Läuft als YAML-Dashboard direkt von der Platte (siehe configuration.yaml
+# + docker-compose.yml) -> diese Datei einfach bearbeiten und im Browser
+# neu laden, kein Copy-Paste über den RAW-Editor mehr nötig.
+#
+# Entity-IDs (Stand 2026-08-07):
+#   - Wannsee: SwitchBot Pan/Tilt Camera 3K  (camera.wannsee_switchbot_pan_tilt_camera_3k_mainstream)
+#   - Dresden: Imou Pan/Tilt-Außenkamera     (camera.imou_profile000)
+#
+# Bewusst ohne Sensor-Tiles/Buttons/PTZ-Steuerung: PTZ funktioniert bei
+# keiner der beiden Kameras zuverlässig über ONVIF (Details siehe
+# CLAUDE.md unter "SwitchBot" / "Imou Pan/Tilt-Außenkamera Dresden").
+#
+# camera_view: live - UNTERSCHIEDLICH GEHANDHABT PRO KAMERA (2026-08-08),
+# beide Wege haben eigene Probleme über Tailscale:
+#   - Wannsee: BEWUSST OHNE "live". Mit live wird die Vorschau nach ein paar
+#     Minuten grau (WebRTC/go2rtc-TURN-Port 18555 nicht freigegeben, kein
+#     STUN-Server, siehe CLAUDE.md). Unproblematisch ohne live, da hier nie
+#     camera.record dazwischenfunkt (noch nie ausgelöst).
+#   - Dresden: MIT "live" (zurückgestellt, erster Versuch ohne live schlug
+#     fehl). Ohne live pollt die Karte alle 10s ein frisches HTTP-Standbild
+#     per RTSP-Kurzverbindung - kollidiert ständig mit den 30s-Aufnahmen aus
+#     camera.record (Bewegung hier sehr häufig), Kamera verträgt vermutlich
+#     nur eine RTSP-Verbindung gleichzeitig -> Dauer-Timeouts, Kachel tot.
+#     Mit live bleibt es bei einer einzigen persistenten Verbindung statt
+#     Dauerpolling - noch nicht bestätigt, ob das über Tailscale auch grau
+#     wird wie bei Wannsee, aber weniger aggressiv gegenüber der Kamera.
+#
+# Ereignisleiste unter jedem Bild: KEIN Standard-Logbook mehr (kann keine
+# eigenen Links), sondern eine Markdown-Karte, die aus sensor.kamera_ereignisse
+# (Trigger-Template in configuration.yaml, gefüttert vom "kamera_ereignis"-
+# Event aus den Aufnahme-Automationen in automations.yaml) eine Liste
+# klickbarer Links auf die aufgenommenen MP4-Clips rendert. Letzte 30
+# Ereignisse insgesamt (über beide Kameras), hier pro Karte auf die passende
+# Kamera gefiltert.
+#
+# OPTIK: reines Text/Unicode-Timeline (●/│), KEIN HTML/CSS mehr (2026-08-08,
+# zweiter Anlauf). Erster Versuch war <div>+<span>+eingebettetes <style> -
+# ist gescheitert: HA/marked.js erkennt <style> nur als Raw-HTML-Block, wenn
+# es am ZEILENANFANG steht; die YAML-Faltung ("content: >" zieht alle Zeilen
+# ohne Leerzeile zu einer zusammen) zerstört genau das, <style> landet dadurch
+# als sichtbarer Klartext auf der Karte statt als CSS zu wirken. card_mod
+# (würde das zuverlässig lösen) ist nicht installiert, siehe CLAUDE.md.
+# Statt dessen: Verkettung über den Jinja-Filter "join('\n\n...\n\n')" -
+# echte Zeilenumbrüche entstehen dabei ERST beim Rendern (nicht im YAML-
+# Quelltext), die YAML-Faltung kann sie also nicht mehr zerstören.
+#
+# WICHTIG, schon mal versehentlich verloren gegangen (2026-08-08): Die
+# Links MÜSSEN als rohes <a href="..." target="_blank" rel="noopener">
+# gebaut werden, NICHT als Markdown-Syntax [text](url) - Markdown-Links
+# ohne target="_blank" fängt HAs Frontend als SPA-Navigation ab und landet
+# auf der Übersichtsseite statt beim Video. <a> übersteht den Sanitizer
+# (bestätigt, im Gegensatz zu <div>/<span>/<style>), nur eben MIT target.
+#
+# TÜRKONTAKTE (Söller, Eingangstür, Haustür, Haustür Wannsee, Wintergarten):
+# Sensoren sind Tuya/Smart Life-Geräte, aktuell nur über Alexa eingebunden,
+# noch NICHT in HA. Einmaliger manueller Schritt nötig, bevor die Tile-
+# Karten unten funktionieren (Platzhalter-Entity-IDs in GROSSBUCHSTABEN,
+# wie schon in switchbot_dashboard_templates.yaml):
+#
+#   1. https://iot.tuya.com -> Account anlegen (falls noch nicht vorhanden)
+#      -> Cloud -> "Create Cloud Project" (Data Center: "Central Europe
+#      Data Center" für Deutschland, sonst finden sich die Geräte nicht)
+#   2. Im Projekt unter "Devices" -> "Link Tuya App Account" -> QR-Code mit
+#      der Smart Life App scannen (Account, an dem die 5 Türsensoren hängen)
+#      -> Geräte sollten danach unter "All Devices" auftauchen
+#   3. Unter "Cloud" -> Projekt -> "Overview": Access ID (Client ID) und
+#      Access Secret (Client Secret) notieren
+#   4. In HA: Einstellungen -> Geräte & Dienste -> Integration hinzufügen
+#      -> "Tuya" -> Access ID + Access Secret eintragen -> Region "Central
+#      Europe" -> per Smart-Life-Account-Login autorisieren
+#   5. Nach dem Pairing: die 5 GROSSGESCHRIEBENEN Platzhalter unten durch
+#      die echten binary_sensor.*-Entity-IDs ersetzen (Einstellungen ->
+#      Geräte & Dienste -> Entitäten -> nach "tür"/"contact" filtern)
+# =====================================================================
+
+title: Sicherheit
+views:
+  - title: Sicherheit
+    path: sicherheit
+    type: sections
+    max_columns: 2
+    sections:
+      - type: grid
+        cards:
+          - type: picture-entity
+            entity: camera.wannsee_switchbot_pan_tilt_camera_3k_mainstream
+            name: Wannsee
+            show_state: false
+            grid_options:
+              columns: full
+              rows: 4
+          - type: markdown
+            title: Ereignisse Wannsee
+            content: >
+              {% set events = (state_attr('sensor.kamera_ereignisse', 'events') or [])
+                 | selectattr('kamera', 'eq', 'wannsee') | list %}
+              {% if events | length == 0 %}
+              _Noch keine Ereignisse aufgezeichnet._
+              {% else %}
+              {% set ns = namespace(lines=[]) %}
+              {% for e in events | reverse %}
+              {% set zeit = strptime(e.zeit, '%Y-%m-%d_%H-%M-%S').strftime('%d.%m. %H:%M:%S') %}
+              {% set ns.lines = ns.lines + ['<a href="/local/kamera_aufnahmen/' ~ e.dateiname ~ '" target="_blank" rel="noopener">● **' ~ zeit ~ '** — Bewegung erkannt</a>'] %}
+              {% endfor %}
+              {{ ns.lines | join('\n\n│\n\n') }}
+              {% endif %}
+            grid_options:
+              columns: full
+              rows: 4
+
+      - type: grid
+        cards:
+          - type: picture-entity
+            entity: camera.imou_profile000
+            name: Dresden
+            camera_view: live
+            show_state: false
+            grid_options:
+              columns: full
+              rows: 4
+          - type: markdown
+            title: Ereignisse Dresden
+            content: >
+              {% set events = (state_attr('sensor.kamera_ereignisse', 'events') or [])
+                 | selectattr('kamera', 'eq', 'dresden') | list %}
+              {% if events | length == 0 %}
+              _Noch keine Ereignisse aufgezeichnet._
+              {% else %}
+              {% set ns = namespace(lines=[]) %}
+              {% for e in events | reverse %}
+              {% set zeit = strptime(e.zeit, '%Y-%m-%d_%H-%M-%S').strftime('%d.%m. %H:%M:%S') %}
+              {% set ns.lines = ns.lines + ['<a href="/local/kamera_aufnahmen/' ~ e.dateiname ~ '" target="_blank" rel="noopener">● **' ~ zeit ~ '** — Bewegung erkannt</a>'] %}
+              {% endfor %}
+              {{ ns.lines | join('\n\n│\n\n') }}
+              {% endif %}
+            grid_options:
+              columns: full
+              rows: 4
+
+      - type: grid
+        cards:
+          - type: heading
+            heading: Türkontakte
+            heading_style: title
+          - type: entities
+            title: Söller
+            entities:
+              - entity: binary_sensor.terrasse_tur
+                name: Tür
+              - entity: binary_sensor.terrasse_tamper
+                name: Tamper
+              - entity: sensor.terrasse_batterie
+                name: Batterie
+            grid_options:
+              columns: full
+          - type: entities
+            title: Eingangstür
+            entities:
+              - entity: binary_sensor.eingangstur_tur
+                name: Tür
+              - entity: binary_sensor.eingangstur_tamper
+                name: Tamper
+              - entity: sensor.eingangstur_batterie
+                name: Batterie
+            grid_options:
+              columns: full
+          - type: entities
+            title: Haustür
+            entities:
+              - entity: binary_sensor.haustur_tur
+                name: Tür
+              - entity: binary_sensor.haustur_tamper
+                name: Tamper
+              - entity: sensor.haustur_batterie
+                name: Batterie
+            grid_options:
+              columns: full
+          - type: entities
+            title: Haustür Wannsee
+            entities:
+              - entity: binary_sensor.haustur_wannsee
+                name: Tür
+              - entity: binary_sensor.haustur_wannsee_tamper
+                name: Tamper
+              - entity: sensor.haustur_wannsee_batterie
+                name: Batterie
+            grid_options:
+              columns: full
+          - type: entities
+            title: Wintergarten
+            entities:
+              - entity: binary_sensor.wintergarten_tur
+                name: Tür
+              - entity: binary_sensor.wintergarten_tamper
+                name: Tamper
+              - entity: sensor.wintergarten_batterie
+                name: Batterie
+            grid_options:
+              columns: full

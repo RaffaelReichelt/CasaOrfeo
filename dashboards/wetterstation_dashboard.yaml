@@ -1,0 +1,240 @@
+# =====================================================================
+# LOVELACE-DASHBOARD "Wetterstation"
+# Läuft als YAML-Dashboard direkt von der Platte (siehe configuration.yaml
+# + docker-compose.yml, dashboards/-Verzeichnis-Mount) -> Bearbeiten +
+# Browser-Reload genügt, kein RAW-Editor-Copy-Paste nötig.
+#
+# Entity-IDs (Stand 2026-08-08, tuya_local, Gerät "Wetterstation" am
+# Standort Söller - siehe CLAUDE.md "Falsches Device File" für die
+# Vorgeschichte, warum die Sensoren lange nicht vollständig waren).
+# Tile-Karten statt einer reinen Entitätenliste, da sie automatisch
+# passende Icons je nach device_class ziehen (Thermometer, Tropfen,
+# Windrad, Blitz, Sonne, Akku...) - deutlich "ansprechender" als die
+# generierte Standard-Geräteseite.
+#
+# Layout (2026-08-08, nach Feedback "zu gedrängt"): "vertical: true" raus
+# (Icon oben/Text darunter gestapelt lief in schmalen 3er-Spalten über,
+# nicht mehr lesbar) -> jetzt horizontal (Icon links, Name+Wert daneben),
+# außerdem max. 2 Kacheln pro Zeile statt 3.
+#
+# Titel "nicht fett" (ebenfalls gewünscht) ist mit nativen Tile-Karten-
+# Optionen NICHT möglich - im Frontend-Bundle geprüft (nicht geraten):
+# es gibt hide_state/vertical/state_content, aber kein hide_name oder
+# Schriftgewicht-Schalter. Bräuchte card_mod (bewusst nicht installiert,
+# siehe CLAUDE.md/sicherheit_dashboard.yaml Kamera-Timeline-Historie).
+#
+# Wind-Richtung (DP 112 "ENE"/"SSE"/...) ist keine eigene Entity, sondern
+# ein Attribut auf sensor.soller_wetterstation_windgeschwindigkeit - bei
+# Bedarf später als eigene Karte ergänzbar (attribute-Card oder Template).
+# =====================================================================
+
+title: Wetterstation
+views:
+  - title: Wetterstation
+    path: wetterstation
+    type: sections
+    max_columns: 2
+    sections:
+      # ---------------- PROGNOSE ----------------
+      # weather.forecast_home (Met.no-Integration, Standort Dresden) war
+      # schon eingerichtet, nur noch nirgends im Dashboard verwendet.
+      # Eigene Wetterstation liefert nur Momentanwerte, keine Prognose
+      # (Vorhersage braucht Wettermodelle, kein einzelner Sensor kann das).
+      - type: grid
+        cards:
+          - type: heading
+            heading: Prognose
+            heading_style: title
+          - type: weather-forecast
+            entity: weather.forecast_home
+            forecast_type: daily
+            show_current: true
+            grid_options:
+              columns: full
+              rows: 4
+
+      # ---------------- INNEN ----------------
+      - type: grid
+        cards:
+          - type: heading
+            heading: Innen
+            heading_style: title
+          - type: horizontal-stack
+            grid_options:
+              columns: full
+              rows: 1
+            cards:
+              - type: tile
+                entity: sensor.wetterstation_indoor_temperature
+                name: Temperatur
+              - type: tile
+                entity: sensor.wetterstation_indoor_humidity
+                name: Luftfeuchtigkeit
+          - type: horizontal-stack
+            grid_options:
+              columns: full
+              rows: 1
+            cards:
+              - type: tile
+                entity: sensor.wetterstation_innen_taupunkt
+                name: Taupunkt
+              - type: tile
+                entity: sensor.wetterstation_innen_spread
+                name: Spread
+          - type: horizontal-stack
+            grid_options:
+              columns: full
+              rows: 1
+            cards:
+              - type: tile
+                entity: sensor.innen_vpd
+                name: VPD (Pflanzen)
+                state_content:
+                  - state
+                  - empfehlung
+
+      # ---------------- AUSSEN: KLIMA ----------------
+      - type: grid
+        cards:
+          - type: heading
+            heading: Außen – Klima
+            heading_style: title
+          - type: horizontal-stack
+            grid_options:
+              columns: full
+              rows: 1
+            cards:
+              - type: tile
+                entity: sensor.soller_wetterstation_temperatur
+                name: Temperatur
+              - type: tile
+                entity: sensor.soller_wetterstation_luftfeuchtigkeit
+                name: Luftfeuchtigkeit
+          - type: horizontal-stack
+            grid_options:
+              columns: full
+              rows: 1
+            cards:
+              - type: tile
+                entity: sensor.soller_wetterstation_dewpoint
+                name: Taupunkt
+              - type: tile
+                entity: sensor.soller_spread
+                name: Spread
+          - type: horizontal-stack
+            grid_options:
+              columns: full
+              rows: 1
+            cards:
+              - type: tile
+                entity: sensor.soller_wetterstation_feels_like
+                name: Gefühlt
+          - type: horizontal-stack
+            grid_options:
+              columns: full
+              rows: 1
+            cards:
+              - type: tile
+                entity: sensor.soller_wetterstation_heat_index
+                name: Hitzeindex
+              - type: tile
+                entity: sensor.soller_wetterstation_windchill
+                name: Windchill
+          - type: horizontal-stack
+            grid_options:
+              columns: full
+              rows: 1
+            cards:
+              - type: tile
+                entity: sensor.soller_vpd
+                name: VPD (Pflanzen)
+                state_content:
+                  - state
+                  - empfehlung
+
+      # ---------------- WIND ----------------
+      - type: grid
+        cards:
+          - type: heading
+            heading: Wind
+            heading_style: title
+          - type: horizontal-stack
+            grid_options:
+              columns: full
+              rows: 1
+            cards:
+              - type: tile
+                entity: sensor.soller_windgeschwindigkeit_m_s
+                name: Geschwindigkeit
+              - type: tile
+                entity: sensor.soller_windboen_m_s
+                name: Böen
+          - type: horizontal-stack
+            grid_options:
+              columns: full
+              rows: 1
+            cards:
+              - type: tile
+                entity: sensor.soller_windrichtung
+                name: Richtung
+          - type: horizontal-stack
+            grid_options:
+              columns: full
+              rows: 1
+            cards:
+              - type: tile
+                entity: sensor.soller_wind_beaufort
+                name: Beaufort
+                state_content:
+                  - state
+                  - beschreibung
+              - type: tile
+                entity: sensor.soller_windboen_beaufort
+                name: Böen Beaufort
+                state_content:
+                  - state
+                  - beschreibung
+
+      # ---------------- NIEDERSCHLAG ----------------
+      - type: grid
+        cards:
+          - type: heading
+            heading: Niederschlag
+            heading_style: title
+          - type: horizontal-stack
+            grid_options:
+              columns: full
+              rows: 1
+            cards:
+              - type: tile
+                entity: sensor.soller_wetterstation_niederschlagsintensitat
+                name: Intensität
+              - type: tile
+                entity: sensor.soller_wetterstation_niederschlagsmenge
+                name: Menge
+
+      # ---------------- SONNE & DRUCK ----------------
+      - type: grid
+        cards:
+          - type: heading
+            heading: Sonne & Luftdruck
+            heading_style: title
+          - type: horizontal-stack
+            grid_options:
+              columns: full
+              rows: 1
+            cards:
+              - type: tile
+                entity: sensor.soller_wetterstation_uv_index
+                name: UV-Index
+              - type: tile
+                entity: sensor.soller_wetterstation_beleuchtungsstarke
+                name: Helligkeit
+          - type: horizontal-stack
+            grid_options:
+              columns: full
+              rows: 1
+            cards:
+              - type: tile
+                entity: sensor.soller_wetterstation_atmospharischer_druck
+                name: Luftdruck

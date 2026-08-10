@@ -4,11 +4,20 @@ services:
     image: ghcr.io/home-assistant/home-assistant:stable
     volumes:
       - ./config:/config
+      # dashboards/ als VERZEICHNIS gemountet, nicht einzelne Datei -> siehe
+      # CLAUDE.md ("YAML-Dashboards direkt von der Platte laden") für den
+      # Hintergrund: ein Einzeldatei-Mount hängt an der Inode zum Mount-
+      # Zeitpunkt und wird bei atomarem Überschreiben (neue Inode) nie mehr
+      # aktualisiert, ein docker restart reicht dafür NICHT. Verzeichnis-Mounts
+      # lösen Pfade bei jedem Zugriff neu auf, sind also immun dagegen -
+      # gleiches Prinzip wie ./config:/config, das deshalb nie betroffen war.
+      - ./dashboards:/dashboards:ro
       - /etc/localtime:/etc/localtime:ro
     restart: unless-stopped
     privileged: true
     ports:
       - "8123:8123"
+    # network_mode: host
 
   tailscale:
     container_name: tailscale-homeassistant
@@ -17,6 +26,7 @@ services:
     environment:
       - TS_AUTHKEY=${TS_AUTHKEY?Variable not set}
       - TS_STATE_DIR=/var/lib/tailscale
+      - TS_EXTRA_ARGS=--reset --accept-dns=false
     volumes:
       - tailscale-state:/var/lib/tailscale
       - /dev/net/tun:/dev/net/tun

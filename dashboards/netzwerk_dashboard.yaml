@@ -1,0 +1,51 @@
+# =====================================================================
+# LOVELACE-DASHBOARD "Netzwerk"
+# Migriert von Storage-Mode nach YAML (2026-08-08) - läuft jetzt direkt
+# von der Platte, siehe configuration.yaml (lovelace.dashboards) +
+# docker-compose.yml (dashboards/-Verzeichnis-Mount, siehe CLAUDE.md für
+# den Hintergrund zum Verzeichnis- vs. Einzeldatei-Mount). Bearbeiten +
+# Browser-Reload genügt, kein RAW-Editor-Copy-Paste mehr nötig.
+# 1:1 übernommen aus dem alten .storage/lovelace.dashboard_netzwerk.
+# =====================================================================
+
+title: Netzwerk
+views:
+  - title: WLAN Diagnose
+    path: wlan-diagnose
+    icon: mdi:wifi-alert
+    cards:
+      - type: entities
+        title: Mesh Status (aktuell)
+        entities:
+          - binary_sensor.speedport_smart_4
+          - binary_sensor.speedhome_og
+          - binary_sensor.speedhome_eg
+          - sensor.speedhome_wifi_ip
+          - sensor.speedhome_wlan_ip
+      - type: glance
+        title: Erreichbarkeit letzte 24h
+        entities:
+          - sensor.speedport_erreichbarkeit_24h
+          - sensor.speedhome_wifi_erreichbarkeit_24h
+          - sensor.speedhome_wlan_erreichbarkeit_24h
+      - type: history-graph
+        title: Ausfälle im Verlauf (48h)
+        hours_to_show: 48
+        entities:
+          - binary_sensor.speedport_smart_4
+          - binary_sensor.speedhome_og
+          - binary_sensor.speedhome_eg
+      - type: history-graph
+        title: Latenz-Verlauf (24h)
+        hours_to_show: 24
+        entities:
+          - sensor.speedport_latenz
+          - sensor.speedhome_wifi_latenz
+          - sensor.speedhome_wlan_latenz
+      - type: logbook
+        title: Ereignisprotokoll
+        hours_to_show: 72
+        entities:
+          - binary_sensor.speedport_smart_4
+          - binary_sensor.speedhome_og
+          - binary_sensor.speedhome_eg

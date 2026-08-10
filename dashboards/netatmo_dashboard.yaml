@@ -1,0 +1,241 @@
+# =====================================================================
+# LOVELACE-DASHBOARD "Netatmo"
+# Läuft als YAML-Dashboard direkt von der Platte (siehe configuration.yaml
+# + docker-compose.yml, dashboards/-Verzeichnis-Mount) -> Bearbeiten +
+# Browser-Reload genügt, kein RAW-Editor-Copy-Paste nötig.
+#
+# Gleicher Aufbau wie wetterstation_dashboard.yaml (Tuya/Söller-Station),
+# aber für die Netatmo-Wetterstation (Modul-Namen "Innen"/"Innen Außen"/
+# "Innen Windmesser"/"Innen Regenmesser" - so vom Nutzer in der Netatmo-
+# App benannt, "Innen" ist der Stationsname, nicht nur das Innenmodul).
+# Integration läuft über "Home Assistant Cloud" (Nabu Casa), Stand 2026-08-08.
+#
+# Windgeschwindigkeit/-böen in m/s statt km/h umgerechnet (eigene Template-
+# Sensoren "Netatmo Wind.../m_s", gleicher Grund/gleiche Falle wie bei der
+# Tuya-Station: device_class: wind_speed löst HAs automatische km/h-
+# Normalisierung aus, deshalb bewusst ohne device_class in den Templates).
+# Windrichtung kommt bei Netatmo als eigene Entity (nicht als Attribut wie
+# bei Tuya), aber klein geschrieben ("se" statt "SE") - Template übersetzt
+# ins Deutsche + Großschreibung.
+#
+# Böen-Sensor (sensor.innen_windmesser_boenstarke) war standardmäßig
+# deaktiviert (Diagnose-Entity) - für Wind-Parität mit der anderen Station
+# manuell aktiviert (2026-08-08, .storage/core.entity_registry).
+#
+# VPD wie bei der Tuya-Station - eigene Sensoren "Netatmo Innen/Außen VPD",
+# gleiche Formel/Einteilung, siehe configuration.yaml für Details/Quelle.
+#
+# Akkustatus ist hier (anders als bei Tuya) sinnvoll, da Netatmo echte
+# Prozentwerte liefert statt "unknown".
+#
+# Prognose nutzt dieselbe weather.forecast_home-Entity (Met.no, Dresden)
+# wie im Wetterstation-Dashboard - keine zweite Wetterintegration nötig,
+# beide Stationen sind ja am selben Standort.
+# =====================================================================
+
+title: Netatmo
+views:
+  - title: Netatmo
+    path: netatmo
+    type: sections
+    max_columns: 2
+    sections:
+      # ---------------- PROGNOSE ----------------
+      - type: grid
+        cards:
+          - type: heading
+            heading: Prognose
+            heading_style: title
+          - type: weather-forecast
+            entity: weather.forecast_home
+            forecast_type: daily
+            show_current: true
+            grid_options:
+              columns: full
+              rows: 4
+
+      # ---------------- INNEN ----------------
+      - type: grid
+        cards:
+          - type: heading
+            heading: Innen
+            heading_style: title
+          - type: horizontal-stack
+            grid_options:
+              columns: full
+              rows: 1
+            cards:
+              - type: tile
+                entity: sensor.innen_temperatur
+                name: Temperatur
+              - type: tile
+                entity: sensor.innen_luftfeuchtigkeit
+                name: Luftfeuchtigkeit
+          - type: horizontal-stack
+            grid_options:
+              columns: full
+              rows: 1
+            cards:
+              - type: tile
+                entity: sensor.innen_kohlendioxid
+                name: CO₂
+              - type: tile
+                entity: sensor.innen_larm
+                name: Lärm
+          - type: horizontal-stack
+            grid_options:
+              columns: full
+              rows: 1
+            cards:
+              - type: tile
+                entity: sensor.innen_atmospharischer_druck
+                name: Luftdruck
+              - type: tile
+                entity: sensor.netatmo_innen_taupunkt
+                name: Taupunkt
+          - type: horizontal-stack
+            grid_options:
+              columns: full
+              rows: 1
+            cards:
+              - type: tile
+                entity: sensor.netatmo_innen_spread
+                name: Spread
+          - type: horizontal-stack
+            grid_options:
+              columns: full
+              rows: 1
+            cards:
+              - type: tile
+                entity: sensor.netatmo_innen_vpd
+                name: VPD (Pflanzen)
+                state_content:
+                  - state
+                  - empfehlung
+
+      # ---------------- AUSSEN ----------------
+      - type: grid
+        cards:
+          - type: heading
+            heading: Außen
+            heading_style: title
+          - type: horizontal-stack
+            grid_options:
+              columns: full
+              rows: 1
+            cards:
+              - type: tile
+                entity: sensor.innen_aussen_temperatur
+                name: Temperatur
+              - type: tile
+                entity: sensor.innen_aussen_luftfeuchtigkeit
+                name: Luftfeuchtigkeit
+          - type: horizontal-stack
+            grid_options:
+              columns: full
+              rows: 1
+            cards:
+              - type: tile
+                entity: sensor.netatmo_aussen_taupunkt
+                name: Taupunkt
+              - type: tile
+                entity: sensor.netatmo_aussen_spread
+                name: Spread
+          - type: horizontal-stack
+            grid_options:
+              columns: full
+              rows: 1
+            cards:
+              - type: tile
+                entity: sensor.netatmo_aussen_vpd
+                name: VPD (Pflanzen)
+                state_content:
+                  - state
+                  - empfehlung
+
+      # ---------------- WIND ----------------
+      - type: grid
+        cards:
+          - type: heading
+            heading: Wind
+            heading_style: title
+          - type: horizontal-stack
+            grid_options:
+              columns: full
+              rows: 1
+            cards:
+              - type: tile
+                entity: sensor.netatmo_windgeschwindigkeit_m_s
+                name: Geschwindigkeit
+              - type: tile
+                entity: sensor.netatmo_windboen_m_s
+                name: Böen
+          - type: horizontal-stack
+            grid_options:
+              columns: full
+              rows: 1
+            cards:
+              - type: tile
+                entity: sensor.netatmo_windrichtung
+                name: Richtung
+          - type: horizontal-stack
+            grid_options:
+              columns: full
+              rows: 1
+            cards:
+              - type: tile
+                entity: sensor.netatmo_wind_beaufort
+                name: Beaufort
+                state_content:
+                  - state
+                  - beschreibung
+              - type: tile
+                entity: sensor.netatmo_windboen_beaufort
+                name: Böen Beaufort
+                state_content:
+                  - state
+                  - beschreibung
+
+      # ---------------- NIEDERSCHLAG ----------------
+      - type: grid
+        cards:
+          - type: heading
+            heading: Niederschlag
+            heading_style: title
+          - type: horizontal-stack
+            grid_options:
+              columns: full
+              rows: 1
+            cards:
+              - type: tile
+                entity: sensor.innen_regenmesser_niederschlagsmenge
+                name: Aktuell
+              - type: tile
+                entity: sensor.innen_regenmesser_niederschlagsmenge_heute
+                name: Heute
+
+      # ---------------- AKKUSTATUS ----------------
+      - type: grid
+        cards:
+          - type: heading
+            heading: Akkustatus
+            heading_style: title
+          - type: horizontal-stack
+            grid_options:
+              columns: full
+              rows: 1
+            cards:
+              - type: tile
+                entity: sensor.innen_windmesser_batterie
+                name: Windmesser
+              - type: tile
+                entity: sensor.innen_aussen_batterie
+                name: Außenmodul
+          - type: horizontal-stack
+            grid_options:
+              columns: full
+              rows: 1
+            cards:
+              - type: tile
+                entity: sensor.innen_regenmesser_batterie
+                name: Regenmesser

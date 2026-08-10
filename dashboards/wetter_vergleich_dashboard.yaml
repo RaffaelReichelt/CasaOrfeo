@@ -1,0 +1,268 @@
+# =====================================================================
+# LOVELACE-DASHBOARD "Wetter-Vergleich"
+# Läuft als YAML-Dashboard direkt von der Platte (siehe configuration.yaml
+# + docker-compose.yml, dashboards/-Verzeichnis-Mount) -> Bearbeiten +
+# Browser-Reload genügt, kein RAW-Editor-Copy-Paste nötig.
+#
+# Stellt die drei Wetterstationen (Tuya/Söller, Netatmo, SwitchBot Meter)
+# Messgröße für Messgröße nebeneinander dar, statt in getrennten Dashboards
+# - für den direkten Vergleich. Jede Zeile = eine Messgröße, drei Kacheln
+# (eine pro Station). VPD zeigt hier bewusst NUR den Wert (state), keine
+# Pflanzenempfehlung als Text - würde in drei nebeneinander gequetschten
+# Kacheln zu viel Platz brauchen (siehe Layout-Lektion vom Wetterstation-
+# Dashboard: horizontal/kompakt statt vertikal gestapelt).
+#
+# Nicht alle Stationen liefern alles - Luftdruck und Wind hat nur Tuya
+# und Netatmo (SwitchBot Meter misst nur Temperatur/Luftfeuchte/Batterie,
+# siehe switchbot_meter_dashboard.yaml), diese beiden Sektionen haben
+# entsprechend nur zwei statt drei Kacheln pro Zeile.
+#
+# Quell-Dashboards mit vollem Kontext/Kommentaren zu jedem Sensor:
+#   - dashboards/wetterstation_dashboard.yaml (Tuya/Söller)
+#   - dashboards/netatmo_dashboard.yaml
+#   - dashboards/switchbot_meter_dashboard.yaml
+# =====================================================================
+
+title: Wetter-Vergleich
+views:
+  - title: Wetter-Vergleich
+    path: wetter-vergleich
+    type: sections
+    max_columns: 3
+    sections:
+      # ==================== INNEN ====================
+      - type: grid
+        cards:
+          - type: heading
+            heading: Innen – Temperatur
+            heading_style: title
+          - type: horizontal-stack
+            grid_options:
+              columns: full
+              rows: 1
+            cards:
+              - type: tile
+                entity: sensor.wetterstation_indoor_temperature
+                name: Tuya
+              - type: tile
+                entity: sensor.innen_temperatur
+                name: Netatmo
+              - type: tile
+                entity: sensor.innenthermometer_temperatur
+                name: SwitchBot
+
+      - type: grid
+        cards:
+          - type: heading
+            heading: Innen – Luftfeuchtigkeit
+            heading_style: title
+          - type: horizontal-stack
+            grid_options:
+              columns: full
+              rows: 1
+            cards:
+              - type: tile
+                entity: sensor.wetterstation_indoor_humidity
+                name: Tuya
+              - type: tile
+                entity: sensor.innen_luftfeuchtigkeit
+                name: Netatmo
+              - type: tile
+                entity: sensor.innenthermometer_luftfeuchtigkeit
+                name: SwitchBot
+
+      - type: grid
+        cards:
+          - type: heading
+            heading: Innen – Taupunkt
+            heading_style: title
+          - type: horizontal-stack
+            grid_options:
+              columns: full
+              rows: 1
+            cards:
+              - type: tile
+                entity: sensor.wetterstation_innen_taupunkt
+                name: Tuya
+              - type: tile
+                entity: sensor.netatmo_innen_taupunkt
+                name: Netatmo
+              - type: tile
+                entity: sensor.switchbot_innen_taupunkt
+                name: SwitchBot
+
+      - type: grid
+        cards:
+          - type: heading
+            heading: Innen – Spread
+            heading_style: title
+          - type: horizontal-stack
+            grid_options:
+              columns: full
+              rows: 1
+            cards:
+              - type: tile
+                entity: sensor.wetterstation_innen_spread
+                name: Tuya
+              - type: tile
+                entity: sensor.netatmo_innen_spread
+                name: Netatmo
+              - type: tile
+                entity: sensor.switchbot_innen_spread
+                name: SwitchBot
+
+      - type: grid
+        cards:
+          - type: heading
+            heading: Innen – VPD
+            heading_style: title
+          - type: horizontal-stack
+            grid_options:
+              columns: full
+              rows: 1
+            cards:
+              - type: tile
+                entity: sensor.innen_vpd
+                name: Tuya
+              - type: tile
+                entity: sensor.netatmo_innen_vpd
+                name: Netatmo
+              - type: tile
+                entity: sensor.switchbot_innen_vpd
+                name: SwitchBot
+
+      # ==================== AUSSEN ====================
+      - type: grid
+        cards:
+          - type: heading
+            heading: Außen – Temperatur
+            heading_style: title
+          - type: horizontal-stack
+            grid_options:
+              columns: full
+              rows: 1
+            cards:
+              - type: tile
+                entity: sensor.soller_wetterstation_temperatur
+                name: Tuya
+              - type: tile
+                entity: sensor.innen_aussen_temperatur
+                name: Netatmo
+              - type: tile
+                entity: sensor.aussenthermometer_temperatur
+                name: SwitchBot
+
+      - type: grid
+        cards:
+          - type: heading
+            heading: Außen – Luftfeuchtigkeit
+            heading_style: title
+          - type: horizontal-stack
+            grid_options:
+              columns: full
+              rows: 1
+            cards:
+              - type: tile
+                entity: sensor.soller_wetterstation_luftfeuchtigkeit
+                name: Tuya
+              - type: tile
+                entity: sensor.innen_aussen_luftfeuchtigkeit
+                name: Netatmo
+              - type: tile
+                entity: sensor.aussenthermometer_luftfeuchtigkeit
+                name: SwitchBot
+
+      - type: grid
+        cards:
+          - type: heading
+            heading: Außen – Taupunkt
+            heading_style: title
+          - type: horizontal-stack
+            grid_options:
+              columns: full
+              rows: 1
+            cards:
+              - type: tile
+                entity: sensor.soller_wetterstation_dewpoint
+                name: Tuya
+              - type: tile
+                entity: sensor.netatmo_aussen_taupunkt
+                name: Netatmo
+              - type: tile
+                entity: sensor.switchbot_aussen_taupunkt
+                name: SwitchBot
+
+      - type: grid
+        cards:
+          - type: heading
+            heading: Außen – Spread
+            heading_style: title
+          - type: horizontal-stack
+            grid_options:
+              columns: full
+              rows: 1
+            cards:
+              - type: tile
+                entity: sensor.soller_spread
+                name: Tuya
+              - type: tile
+                entity: sensor.netatmo_aussen_spread
+                name: Netatmo
+              - type: tile
+                entity: sensor.switchbot_aussen_spread
+                name: SwitchBot
+
+      - type: grid
+        cards:
+          - type: heading
+            heading: Außen – VPD
+            heading_style: title
+          - type: horizontal-stack
+            grid_options:
+              columns: full
+              rows: 1
+            cards:
+              - type: tile
+                entity: sensor.soller_vpd
+                name: Tuya
+              - type: tile
+                entity: sensor.netatmo_aussen_vpd
+                name: Netatmo
+              - type: tile
+                entity: sensor.switchbot_aussen_vpd
+                name: SwitchBot
+
+      # ==================== NUR TUYA + NETATMO ====================
+      - type: grid
+        cards:
+          - type: heading
+            heading: Luftdruck (SwitchBot misst das nicht)
+            heading_style: title
+          - type: horizontal-stack
+            grid_options:
+              columns: full
+              rows: 1
+            cards:
+              - type: tile
+                entity: sensor.soller_wetterstation_atmospharischer_druck
+                name: Tuya
+              - type: tile
+                entity: sensor.innen_atmospharischer_druck
+                name: Netatmo
+
+      - type: grid
+        cards:
+          - type: heading
+            heading: Windgeschwindigkeit (SwitchBot misst das nicht)
+            heading_style: title
+          - type: horizontal-stack
+            grid_options:
+              columns: full
+              rows: 1
+            cards:
+              - type: tile
+                entity: sensor.soller_windgeschwindigkeit_m_s
+                name: Tuya
+              - type: tile
+                entity: sensor.netatmo_windgeschwindigkeit_m_s
+                name: Netatmo

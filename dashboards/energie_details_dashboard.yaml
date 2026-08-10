@@ -1,0 +1,67 @@
+# =====================================================================
+# LOVELACE-DASHBOARD "Energie-Details"
+# Migriert von Storage-Mode nach YAML (2026-08-08) - läuft jetzt direkt
+# von der Platte, siehe configuration.yaml (lovelace.dashboards) +
+# docker-compose.yml (dashboards/-Verzeichnis-Mount, siehe CLAUDE.md für
+# den Hintergrund zum Verzeichnis- vs. Einzeldatei-Mount). Bearbeiten +
+# Browser-Reload genügt, kein RAW-Editor-Copy-Paste mehr nötig.
+# 1:1 übernommen aus dem alten .storage/lovelace.energie-details.
+# =====================================================================
+
+title: Energie-Details
+views:
+  - title: Energie-Details
+    path: default_view
+    cards:
+      # stat_type "sum" zeigt den relativen Gesamtverbrauch SEIT BEGINN DER
+      # AUFZEICHNUNG (fängt bei 0 an) - nicht den echten Zählerstand.
+      # "state" ist der tatsächliche Rohwert (Zählerstand) je Periode.
+      - type: statistics-graph
+        title: Stromverbrauch (5-Minuten-Auflösung)
+        entities:
+          - sensor.obi_energy_bridge_verbrauch_kwh
+        period: 5minute
+        stat_types:
+          - state
+        days_to_show: 7
+      # Ersetzt die alte "Momentanleistung"-Karte (sensor.obi_energy_bridge_
+      # aktuelle_leistung liefert dauerhaft keine Werte, siehe CLAUDE.md/
+      # Session-Historie 2026-08-09 - Bridge online, aber keine Impulse vom
+      # Zähler-Lesekopf mehr).
+      #
+      # 2026-08-09, drei Anläufe bis hierhin:
+      #  1. "change" direkt auf dem Rohsensor -> funktionierte, ABER die
+      #     einmalige Nachhol-Spitze nach dem 18h-Ausfall (~7,46 kWh auf
+      #     einen Schlag) verhagelte die Skala, solange sie im "letzte
+      #     Stunde"-Fenster lag.
+      #  2. Eigener Trigger-Sensor "sensor.obi_verbrauch_wh_bereinigt"
+      #     (configuration.yaml) gebaut, der Zeitlücken >20 Min auf 0 setzt.
+      #     Funktionierte anfangs, blieb aber zweimal reproduzierbar nach
+      #     ein paar Übergängen hängen (kein Trigger mehr, kein Fehler im
+      #     Log) - ungeklärter Bug, nicht weiter verfolgt.
+      #  3. ZURÜCK zu Lösung 1 ("change" auf dem Rohsensor): Die Nachhol-
+      #     Spitze ist inzwischen (mehrere Stunden her) sowieso außerhalb
+      #     jedes "letzte Stunde"-Fensters - der ganze Umweg über den
+      #     Custom-Sensor war nur nötig, SOLANGE die Spitze noch aktuell
+      #     war. Einfachste, robusteste Lösung gewinnt.
+      #  4. "unit: Wh" als Karten-Override versucht, um kWh->Wh anzuzeigen -
+      #     hat nicht funktioniert (Karte blieb bei kWh). Beim Nachlesen im
+      #     Frontend-Code stellte sich raus: dieses Feld sucht nur unter
+      #     bereits vorhandenen Einheiten mehrerer Entities nach einer
+      #     Übereinstimmung, rechnet nicht wirklich um. Stattdessen jetzt
+      #     "sensor.obi_zaehlerstand_wh" (configuration.yaml) - simpler
+      #     state-basierter Sensor, der den Zählerstand nativ in Wh führt,
+      #     kein Karten-Trick mehr nötig.
+      #
+      # "days_to_show" kennt kein Stunden-Pendant - 1/24 als Bruchteil
+      # eines Tages für "letzte Stunde" versucht; nicht offiziell
+      # dokumentiert, im Zweifel hochsetzen falls die Karte leer bleibt.
+      - type: statistics-graph
+        title: Verbrauch letzte Stunde (Differenz zum letzten Messpunkt)
+        chart_type: bar
+        entities:
+          - sensor.obi_zahlerstand_wh
+        period: 5minute
+        stat_types:
+          - change
+        days_to_show: 0.0417
