@@ -10,10 +10,10 @@
 # Ausfall-Historie in CLAUDE.md/Session-Log) ersetzt durch den "bitShake
 # SmartMeterReader" - ein Tasmota-ESP32 mit SML-Optokopf, liest denselben
 # Zähler lokal per MQTT aus, kein Cloud-Umweg mehr. Karten unten zeigen
-# jetzt sensor.stromzaehler_* statt sensor.obi_*. Die OBI-Sensoren/-
-# Integration bleiben in configuration.yaml/als Config-Entry bestehen
-# (nicht gelöscht, nur nicht mehr im Dashboard verdrahtet) - falls der
-# bitShake-Zähler mal Probleme macht, ist der alte Weg noch reaktivierbar.
+# jetzt sensor.stromzaehler_* statt sensor.obi_*. Der Nutzer hat den OBI-
+# Tracker danach bewusst komplett stillgelegt (Integration, Config-Entry
+# und die zugehörigen Wh/"bereinigt"-Template-Sensoren entfernt) - kein
+# Fallback mehr vorgesehen, bitShake ist der endgültige Ersatz.
 # =====================================================================
 
 title: Energie-Details
