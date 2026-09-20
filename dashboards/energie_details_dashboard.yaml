@@ -6,14 +6,20 @@
 # den Hintergrund zum Verzeichnis- vs. Einzeldatei-Mount). Bearbeiten +
 # Browser-Reload genügt, kein RAW-Editor-Copy-Paste mehr nötig.
 #
-# UMBAU 2026-08-10: OBI Energy Tracker (Cloud-Backend, siehe ausführliche
-# Ausfall-Historie in CLAUDE.md/Session-Log) ersetzt durch den "bitShake
-# SmartMeterReader" - ein Tasmota-ESP32 mit SML-Optokopf, liest denselben
-# Zähler lokal per MQTT aus, kein Cloud-Umweg mehr. Karten unten zeigen
-# jetzt sensor.stromzaehler_* statt sensor.obi_*. Der Nutzer hat den OBI-
-# Tracker danach bewusst komplett stillgelegt (Integration, Config-Entry
-# und die zugehörigen Wh/"bereinigt"-Template-Sensoren entfernt) - kein
-# Fallback mehr vorgesehen, bitShake ist der endgültige Ersatz.
+# UMBAU 2026-09-20: Zurück auf den OBI Energy Tracker, nachdem der
+# bitShake-Zähler (2026-08-10 bis 2026-09-20 im Einsatz, siehe CLAUDE.md)
+# an einem Stromversorgungsproblem der Hardware selbst gescheitert ist.
+# Alle bitShake-spezifischen Karten (Momentanleistung, Differenz-je-
+# Messwert, Näherungsleistung, 10s-Auflösung, Ausreißer-Filter) sind damit
+# hinfällig, da sie auf inzwischen entfernten sensor.stromzaehler_*-
+# Entities beruhten - Karten unten zeigen wieder sensor.obi_* wie vor dem
+# bitShake-Umbau. WICHTIG: Die OBI-Integration selbst (custom_components/
+# obi_energy + Config-Entry) wurde am 2026-08-10 vollständig deinstalliert
+# und ist NICHT Teil dieses Reverts - muss vor Nutzung dieses Dashboards
+# manuell über HACS neu installiert + per Cloud-Login neu eingerichtet
+# werden, sonst bleiben die Karten leer. Die zugehörigen Wh-/"bereinigt"-
+# Template-Sensoren (sensor.obi_zaehlerstand_wh etc.) waren nie in Git
+# (config/ ist gitignored) und müssen bei Bedarf neu angelegt werden.
 # =====================================================================
 
 title: Energie-Details
@@ -27,62 +33,49 @@ views:
       - type: statistics-graph
         title: Stromverbrauch (5-Minuten-Auflösung)
         entities:
-          - sensor.stromzaehler_gesamt
+          - sensor.obi_energy_bridge_verbrauch_kwh
         period: 5minute
         stat_types:
           - state
         days_to_show: 7
-
-      # Momentanleistung: sensor.stromzaehler_leistung liegt technisch bereit
-      # (bitShake-Zähler liefert MT174.Power alle 10s), zeigt aber Stand
-      # 2026-08-10 durchgehend 0 W. Grund laut Nutzer: die "erweiterte"
-      # SML-Datensatzvariante mit echter Momentanleistung ist beim Messstellen-
-      # betreiber PIN-gesperrt (nur der öffentliche Teil mit den kumulierten
-      # Zählerständen ist ohne PIN lesbar) - Aktivierung/PIN-Anfrage steht
-      # noch aus, kein Bug. Karte bleibt trotzdem stehen: sobald der PIN
-      # aktiviert ist, füllt sie sich ohne weitere Dashboard-Änderung.
-      - type: history-graph
-        title: Momentanleistung
+      # Ersetzt die alte "Momentanleistung"-Karte (sensor.obi_energy_bridge_
+      # aktuelle_leistung liefert dauerhaft keine Werte, siehe CLAUDE.md/
+      # Session-Historie 2026-08-09 - Bridge online, aber keine Impulse vom
+      # Zähler-Lesekopf mehr).
+      #
+      # 2026-08-09, drei Anläufe bis hierhin:
+      #  1. "change" direkt auf dem Rohsensor -> funktionierte, ABER die
+      #     einmalige Nachhol-Spitze nach dem 18h-Ausfall (~7,46 kWh auf
+      #     einen Schlag) verhagelte die Skala, solange sie im "letzte
+      #     Stunde"-Fenster lag.
+      #  2. Eigener Trigger-Sensor "sensor.obi_verbrauch_wh_bereinigt"
+      #     (configuration.yaml) gebaut, der Zeitlücken >20 Min auf 0 setzt.
+      #     Funktionierte anfangs, blieb aber zweimal reproduzierbar nach
+      #     ein paar Übergängen hängen (kein Trigger mehr, kein Fehler im
+      #     Log) - ungeklärter Bug, nicht weiter verfolgt.
+      #  3. ZURÜCK zu Lösung 1 ("change" auf dem Rohsensor): Die Nachhol-
+      #     Spitze ist inzwischen (mehrere Stunden her) sowieso außerhalb
+      #     jedes "letzte Stunde"-Fensters - der ganze Umweg über den
+      #     Custom-Sensor war nur nötig, SOLANGE die Spitze noch aktuell
+      #     war. Einfachste, robusteste Lösung gewinnt.
+      #  4. "unit: Wh" als Karten-Override versucht, um kWh->Wh anzuzeigen -
+      #     hat nicht funktioniert (Karte blieb bei kWh). Beim Nachlesen im
+      #     Frontend-Code stellte sich raus: dieses Feld sucht nur unter
+      #     bereits vorhandenen Einheiten mehrerer Entities nach einer
+      #     Übereinstimmung, rechnet nicht wirklich um. Stattdessen jetzt
+      #     "sensor.obi_zaehlerstand_wh" (configuration.yaml) - simpler
+      #     state-basierter Sensor, der den Zählerstand nativ in Wh führt,
+      #     kein Karten-Trick mehr nötig.
+      #
+      # "days_to_show" kennt kein Stunden-Pendant - 1/24 als Bruchteil
+      # eines Tages für "letzte Stunde" versucht; nicht offiziell
+      # dokumentiert, im Zweifel hochsetzen falls die Karte leer bleibt.
+      - type: statistics-graph
+        title: Verbrauch letzte Stunde (Differenz zum letzten Messpunkt)
+        chart_type: bar
         entities:
-          - sensor.stromzaehler_leistung
-        hours_to_show: 3
-
-      # "Verbrauch letzte Stunde" (2026-08-10 zweimal überarbeitet):
-      #  1. Ursprünglich ein 5-Minuten-"change"-Balkendiagramm (HAs Kurzzeit-
-      #     Statistik kann nicht feiner - feste Grenze im Recorder, keine
-      #     Konfigurationsoption).
-      #  2. Dann ein 1-Minuten-Zeitfenster-Sensor (sampling per max_age).
-      #  3. Jetzt eine echte Kurve mit ~10s-Auflösung: sensor.stromzahler_
-      #     differenz_pro_messwert (configuration.yaml, nativer "statistics"-
-      #     Sensor, state_characteristic: change, sampling_size: 2 statt
-      #     Zeitfenster) vergleicht bei jedem neuen Messwert vom Zähler
-      #     einfach nur den aktuellen mit dem direkt vorherigen Wert - die
-      #     rohe Differenz zwischen zwei aufeinanderfolgenden ~10s-Ticks.
-      #     history-graph statt statistics-graph, da die tatsächlichen
-      #     Rohwerte interessieren, nicht aggregierte Statistik-Buckets.
-      #  4. Der Anlauf-Ausreißer direkt nach einem HA-Neustart (leerer Sample-
-      #     Puffer, einmal 177 Wh statt der üblichen 1-4 Wh beobachtet) hat
-      #     die y-Achse verhagelt - deshalb zeigt die Karte jetzt
-      #     sensor.stromzahler_differenz_bereinigt (configuration.yaml,
-      #     einfaches Wertgrenzen-Filter-Template, kein Trigger) statt der
-      #     rohen Statistics-Sensor-Entity direkt.
-      - type: history-graph
-        title: Verbrauch – Differenz je Messwert (~10s)
-        entities:
-          - sensor.stromzahler_differenz_bereinigt
-        hours_to_show: 1
-
-      # "Näherungsleistung" (2026-08-10, spaßeshalber) - Watt-Näherung aus der
-      # Wh-Differenz zwischen zwei Messwerten, aber mit der ECHTEN Zeit-
-      # differenz zwischen den Ticks (statistics-Charakteristik "change_second"
-      # statt einer pauschalen /10s-Annahme, siehe sensor.stromzahler_
-      # naherungsleistung in configuration.yaml). So lange die echte
-      # Momentanleistung (Karte oben) noch PIN-gesperrt ist, gibt das schon
-      # mal eine ungefähre Vorschau - kein Ersatz für die echte Messung
-      # (die ist eine Augenblicksmessung des Zählers selbst, das hier ist
-      # eine über das jeweilige Tick-Intervall gemittelte Näherung).
-      - type: history-graph
-        title: Näherungsleistung (aus Wh-Differenz)
-        entities:
-          - sensor.stromzahler_naherungsleistung
-        hours_to_show: 1
+          - sensor.obi_zahlerstand_wh
+        period: 5minute
+        stat_types:
+          - change
+        days_to_show: 0.0417

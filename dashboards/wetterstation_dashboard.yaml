@@ -36,17 +36,25 @@ views:
     max_columns: 2
     sections:
       # ---------------- PROGNOSE ----------------
-      # weather.forecast_home (Met.no-Integration, Standort Dresden) war
+      # weather.forecast_home_2 (Met.no-Integration, Standort Dresden) war
       # schon eingerichtet, nur noch nirgends im Dashboard verwendet.
       # Eigene Wetterstation liefert nur Momentanwerte, keine Prognose
       # (Vorhersage braucht Wettermodelle, kein einzelner Sensor kann das).
+      # 2026-08-11: Entity-ID von weather.forecast_home auf
+      # weather.forecast_home_2 korrigiert - die Met.no-Integration hat am
+      # Morgen intern von "Home-Zone verfolgen" auf feste Koordinaten
+      # umgestellt (config_entry.data verlor track_home), wodurch sich die
+      # interne unique_id ("home" -> "51.0629359-13.8268481") und damit die
+      # Entity-ID geändert hat. weather.forecast_home ist seitdem eine tote,
+      # für immer auf "unavailable" eingefrorene Karteileiche (kein Code-Pfad
+      # spricht sie noch an) - direkt per DB-Abfrage verifiziert.
       - type: grid
         cards:
           - type: heading
             heading: Prognose
             heading_style: title
           - type: weather-forecast
-            entity: weather.forecast_home
+            entity: weather.forecast_home_2
             forecast_type: daily
             show_current: true
             grid_options:

@@ -17,6 +17,15 @@
 # siehe switchbot_meter_dashboard.yaml), diese beiden Sektionen haben
 # entsprechend nur zwei statt drei Kacheln pro Zeile.
 #
+# GLIEDERUNG 2026-08-15: drei sichtbar abgesetzte Blöcke (Innen / Außen /
+# bei SwitchBot fehlende Messgrößen) statt einer durchlaufenden Kette
+# gleich großer Zeilen-Überschriften. Jeder Block startet mit einer
+# eigenen, breiteren "type: heading"-Section (heading_style: title + Icon,
+# volle Breite) als optische Kapitelmarke; die Messgrößen-Überschriften
+# darunter sind auf heading_style: subtitle zurückgestuft, damit die
+# Hierarchie Block > Messgröße auch optisch stimmt (vorher waren beide
+# Ebenen gleich groß "title", kein Unterschied erkennbar).
+#
 # Quell-Dashboards mit vollem Kontext/Kommentaren zu jedem Sensor:
 #   - dashboards/wetterstation_dashboard.yaml (Tuya/Söller)
 #   - dashboards/netatmo_dashboard.yaml
@@ -30,12 +39,19 @@ views:
     type: sections
     max_columns: 3
     sections:
-      # ==================== INNEN ====================
+      # ==================== BLOCK: INNEN ====================
       - type: grid
         cards:
           - type: heading
-            heading: Innen – Temperatur
+            heading: Innen
             heading_style: title
+            icon: mdi:home-thermometer
+
+      - type: grid
+        cards:
+          - type: heading
+            heading: Temperatur
+            heading_style: subtitle
           - type: horizontal-stack
             grid_options:
               columns: full
@@ -54,8 +70,8 @@ views:
       - type: grid
         cards:
           - type: heading
-            heading: Innen – Luftfeuchtigkeit
-            heading_style: title
+            heading: Luftfeuchtigkeit
+            heading_style: subtitle
           - type: horizontal-stack
             grid_options:
               columns: full
@@ -74,8 +90,8 @@ views:
       - type: grid
         cards:
           - type: heading
-            heading: Innen – Taupunkt
-            heading_style: title
+            heading: Taupunkt
+            heading_style: subtitle
           - type: horizontal-stack
             grid_options:
               columns: full
@@ -94,8 +110,8 @@ views:
       - type: grid
         cards:
           - type: heading
-            heading: Innen – Spread
-            heading_style: title
+            heading: Spread
+            heading_style: subtitle
           - type: horizontal-stack
             grid_options:
               columns: full
@@ -114,8 +130,8 @@ views:
       - type: grid
         cards:
           - type: heading
-            heading: Innen – VPD
-            heading_style: title
+            heading: VPD
+            heading_style: subtitle
           - type: horizontal-stack
             grid_options:
               columns: full
@@ -131,12 +147,19 @@ views:
                 entity: sensor.switchbot_innen_vpd
                 name: SwitchBot
 
-      # ==================== AUSSEN ====================
+      # ==================== BLOCK: AUSSEN ====================
       - type: grid
         cards:
           - type: heading
-            heading: Außen – Temperatur
+            heading: Außen
             heading_style: title
+            icon: mdi:weather-partly-cloudy
+
+      - type: grid
+        cards:
+          - type: heading
+            heading: Temperatur
+            heading_style: subtitle
           - type: horizontal-stack
             grid_options:
               columns: full
@@ -155,8 +178,8 @@ views:
       - type: grid
         cards:
           - type: heading
-            heading: Außen – Luftfeuchtigkeit
-            heading_style: title
+            heading: Luftfeuchtigkeit
+            heading_style: subtitle
           - type: horizontal-stack
             grid_options:
               columns: full
@@ -175,8 +198,8 @@ views:
       - type: grid
         cards:
           - type: heading
-            heading: Außen – Taupunkt
-            heading_style: title
+            heading: Taupunkt
+            heading_style: subtitle
           - type: horizontal-stack
             grid_options:
               columns: full
@@ -195,8 +218,8 @@ views:
       - type: grid
         cards:
           - type: heading
-            heading: Außen – Spread
-            heading_style: title
+            heading: Spread
+            heading_style: subtitle
           - type: horizontal-stack
             grid_options:
               columns: full
@@ -215,8 +238,8 @@ views:
       - type: grid
         cards:
           - type: heading
-            heading: Außen – VPD
-            heading_style: title
+            heading: VPD
+            heading_style: subtitle
           - type: horizontal-stack
             grid_options:
               columns: full
@@ -232,12 +255,19 @@ views:
                 entity: sensor.switchbot_aussen_vpd
                 name: SwitchBot
 
-      # ==================== NUR TUYA + NETATMO ====================
+      # ==================== BLOCK: BEI SWITCHBOT FEHLEND ====================
+      - type: grid
+        cards:
+          - type: heading
+            heading: Nur Tuya + Netatmo
+            heading_style: title
+            icon: mdi:alert-circle-outline
+
       - type: grid
         cards:
           - type: heading
             heading: Luftdruck (SwitchBot misst das nicht)
-            heading_style: title
+            heading_style: subtitle
           - type: horizontal-stack
             grid_options:
               columns: full
@@ -254,7 +284,7 @@ views:
         cards:
           - type: heading
             heading: Windgeschwindigkeit (SwitchBot misst das nicht)
-            heading_style: title
+            heading_style: subtitle
           - type: horizontal-stack
             grid_options:
               columns: full

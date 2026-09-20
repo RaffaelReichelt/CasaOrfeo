@@ -13,7 +13,7 @@
 # Stationen berechnet (eigene "SwitchBot ..."-Sensoren, Kollisionsschutz
 # gegenüber den gleichnamigen Innen/Außen-Sensoren der anderen Stationen).
 #
-# Prognose nutzt dieselbe weather.forecast_home-Entity (Met.no, Dresden)
+# Prognose nutzt dieselbe weather.forecast_home_2-Entity (Met.no, Dresden)
 # wie die anderen beiden Wetter-Dashboards - ein Standort, eine Quelle.
 #
 # Akkustatus ist hier sinnvoll (wie bei Netatmo) - SwitchBot liefert echte
@@ -34,7 +34,7 @@ views:
             heading: Prognose
             heading_style: title
           - type: weather-forecast
-            entity: weather.forecast_home
+            entity: weather.forecast_home_2
             forecast_type: daily
             show_current: true
             grid_options:

@@ -28,7 +28,7 @@
 # Akkustatus ist hier (anders als bei Tuya) sinnvoll, da Netatmo echte
 # Prozentwerte liefert statt "unknown".
 #
-# Prognose nutzt dieselbe weather.forecast_home-Entity (Met.no, Dresden)
+# Prognose nutzt dieselbe weather.forecast_home_2-Entity (Met.no, Dresden)
 # wie im Wetterstation-Dashboard - keine zweite Wetterintegration nötig,
 # beide Stationen sind ja am selben Standort.
 # =====================================================================
@@ -47,7 +47,7 @@ views:
             heading: Prognose
             heading_style: title
           - type: weather-forecast
-            entity: weather.forecast_home
+            entity: weather.forecast_home_2
             forecast_type: daily
             show_current: true
             grid_options:

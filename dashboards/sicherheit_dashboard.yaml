@@ -1,40 +1,42 @@
 # =====================================================================
-# LOVELACE-DASHBOARD "Sicherheit" – nur die Live-Bilder beider Kameras
+# LOVELACE-DASHBOARD "Sicherheit" – Kamera- und Türübersicht
 #
 # Läuft als YAML-Dashboard direkt von der Platte (siehe configuration.yaml
 # + docker-compose.yml) -> diese Datei einfach bearbeiten und im Browser
 # neu laden, kein Copy-Paste über den RAW-Editor mehr nötig.
 #
-# Entity-IDs (Stand 2026-08-07):
+# Entity-IDs (Stand 2026-08-17):
 #   - Wannsee: SwitchBot Pan/Tilt Camera 3K  (camera.wannsee_switchbot_pan_tilt_camera_3k_mainstream)
-#   - Dresden: Imou Pan/Tilt-Außenkamera     (camera.imou_profile000)
+#   - Dresden: Imou Pan/Tilt-Außenkamera     (camera.dresden_vorschau, s.u. 2026-08-17)
+#   - Outdoor: SwitchBot Outdoor Pan/Tilt Cam 3K (camera.switchbot_outdoor_pan_tilt_cam_3k_secstream)
 #
 # Bewusst ohne Sensor-Tiles/Buttons/PTZ-Steuerung: PTZ funktioniert bei
 # keiner der beiden Kameras zuverlässig über ONVIF (Details siehe
 # CLAUDE.md unter "SwitchBot" / "Imou Pan/Tilt-Außenkamera Dresden").
 #
-# camera_view: live - UNTERSCHIEDLICH GEHANDHABT PRO KAMERA (2026-08-08),
-# beide Wege haben eigene Probleme über Tailscale:
-#   - Wannsee: BEWUSST OHNE "live". Mit live wird die Vorschau nach ein paar
-#     Minuten grau (WebRTC/go2rtc-TURN-Port 18555 nicht freigegeben, kein
-#     STUN-Server, siehe CLAUDE.md). Unproblematisch ohne live, da hier nie
-#     camera.record dazwischenfunkt (noch nie ausgelöst).
-#   - Dresden: MIT "live" (zurückgestellt, erster Versuch ohne live schlug
-#     fehl). Ohne live pollt die Karte alle 10s ein frisches HTTP-Standbild
-#     per RTSP-Kurzverbindung - kollidiert ständig mit den 30s-Aufnahmen aus
-#     camera.record (Bewegung hier sehr häufig), Kamera verträgt vermutlich
-#     nur eine RTSP-Verbindung gleichzeitig -> Dauer-Timeouts, Kachel tot.
-#     Mit live bleibt es bei einer einzigen persistenten Verbindung statt
-#     Dauerpolling - noch nicht bestätigt, ob das über Tailscale auch grau
-#     wird wie bei Wannsee, aber weniger aggressiv gegenüber der Kamera.
+# DRESDEN, GRUNDSÄTZLICHER UMBAU (2026-08-17): Nach tagelangem Hin und Her
+# mit camera_view: live (WebRTC/go2rtc-TURN grau, siehe CLAUDE.md) UND ohne
+# live (10s-RTSP-Polling überlastete die Kamera bis zum Absturz, ebenfalls
+# CLAUDE.md, 2026-08-15/16) komplett auf ein entkoppeltes Standbild-Modell
+# umgestellt: camera.dresden_vorschau ist eine local_file-Kamera (siehe
+# configuration.yaml), die nur eine lokale JPG-Datei liest - kein Stream,
+# keine RTSP-Verbindung, kein WebRTC. Die Datei wird per shell_command über
+# den nativen ONVIF-HTTP-Snapshot-Endpunkt aktualisiert: alle 5 Minuten
+# automatisch (Automation in automations.yaml) UND sofort bei erkannter
+# Bewegung (ergänzt in derselben Automation, die auch den Ereignis-Clip
+# aufnimmt). Damit vollständig unabhängig von go2rtc/WebRTC UND ohne jede
+# RTSP-Zusatzlast über die ohnehin schon von camera.record genutzte
+# Verbindung hinaus - behebt beide bisherigen Fehlerklassen an der Wurzel.
+# Wannsee/Outdoor laufen unverändert weiter mit ihrem bisherigen Live/Nicht-
+# Live-Ansatz (siehe Kommentare unten), nur Dresden war akut betroffen.
 #
 # Ereignisleiste unter jedem Bild: KEIN Standard-Logbook mehr (kann keine
 # eigenen Links), sondern eine Markdown-Karte, die aus sensor.kamera_ereignisse
 # (Trigger-Template in configuration.yaml, gefüttert vom "kamera_ereignis"-
 # Event aus den Aufnahme-Automationen in automations.yaml) eine Liste
 # klickbarer Links auf die aufgenommenen MP4-Clips rendert. Letzte 30
-# Ereignisse insgesamt (über beide Kameras), hier pro Karte auf die passende
-# Kamera gefiltert.
+# Ereignisse insgesamt (über alle drei Kameras), hier pro Karte auf die
+# passende Kamera gefiltert.
 #
 # OPTIK: reines Text/Unicode-Timeline (●/│), KEIN HTML/CSS mehr (2026-08-08,
 # zweiter Anlauf). Erster Versuch war <div>+<span>+eingebettetes <style> -
@@ -58,10 +60,23 @@
 # Tuya/Smart-Life-Geräte über die Tuya-Cloud-Integration (Schritt-für-Schritt
 # war hier früher dokumentiert, Pairing inzwischen erledigt). Stand 2026-08-10:
 # 3 von 5 real gepairt und mit Historie (Söller/Terrasse, Eingangstür,
-# Haustür) - binary_sensor.haustur_wannsee* und binary_sensor.wintergarten_tur*
-# existieren noch NICHT (per direkter DB-Abfrage verifiziert, nicht nur
-# angenommen), bleiben unten als vorausschauende Platzhalter stehen und
-# fangen einfach an zu funktionieren, sobald das Pairing nachgeholt wird.
+# Haustür).
+#
+# STUDIO (2026-08-29): 6. Kontaktsensor, nicht im ursprünglichen 5er-Inventar
+# oben. Entity-ID kam generisch als "contact_sensor_4_*" aus dem Pairing,
+# analog zu den anderen Türen auf "studio_*" umbenannt (core.entity_registry
+# direkt editiert, Container dafür kurz gestoppt).
+#
+# HAUSTÜR WANNSEE (2026-09-02): war monatelang nicht pairbar - Ursache war
+# kein physisches Problem, sondern zwei getrennte Tuya-Konten (Dresden per
+# E-Mail, Wannsee per "Bei Apple anmelden" - für Tuya zwei verschiedene
+# Konten). Fix über Tuyas eigenes Geräte-Teilen-Feature, siehe CLAUDE.md
+# "Türkontakte". Jetzt aktiv, kein Tamper-Sensor bei diesem Gerätemodell.
+#
+# WINTERGARTEN weiterhin offen: meldet zwar über Alexa (Cloud-zu-Cloud-Link,
+# unabhängig von lokalem Alexa-Gerät), taucht aber in KEINEM der beiden
+# bekannten Tuya-Konten auf - vermutlich ein drittes, unbekanntes Konto.
+# Erst wieder ins Dashboard aufnehmen, sobald die Entity real existiert.
 # =====================================================================
 
 title: Sicherheit
@@ -98,13 +113,27 @@ views:
             grid_options:
               columns: full
               rows: 4
+          # 2026-08-15: Hue-Sicherheitszone Wannsee ergänzt. Die Hue Bridge Pro
+          # (192.168.1.30) hat KEINE eigenen Bewegungs-/Kontaktsensor-Geräte
+          # gepairt (device_registry geprüft: nur Lampen + Räume/Zonen) - die
+          # einzige sicherheitsrelevante Entity ist der software-seitige
+          # "Bewegungsbereich" der Zone "Wohnzimmer Wannsee". Eine eigene
+          # Arm/Unarm-Statusanzeige (Hue Secure scharf/unscharf) gibt es in
+          # HAs Hue-Integration nicht als Entity - nur diese Bewegungserkennung.
+          - type: entities
+            title: Hue Sicherheitszone
+            entities:
+              - entity: binary_sensor.wohnzimmer_wannsee_wohnzimmer_wannsee_bewegungsbereich
+                name: Bewegung Wohnzimmer
+            grid_options:
+              columns: full
+              rows: 2
 
       - type: grid
         cards:
           - type: picture-entity
-            entity: camera.imou_profile000
+            entity: camera.dresden_vorschau
             name: Dresden
-            camera_view: live
             show_state: false
             grid_options:
               columns: full
@@ -114,6 +143,34 @@ views:
             content: >
               {% set events = (state_attr('sensor.kamera_ereignisse', 'events') or [])
                  | selectattr('kamera', 'eq', 'dresden') | list %}
+              {% if events | length == 0 %}
+              _Noch keine Ereignisse aufgezeichnet._
+              {% else %}
+              {% set ns = namespace(lines=[]) %}
+              {% for e in events | reverse %}
+              {% set zeit = strptime(e.zeit, '%Y-%m-%d_%H-%M-%S').strftime('%d.%m. %H:%M:%S') %}
+              {% set ns.lines = ns.lines + ['<a href="/local/kamera_aufnahmen/' ~ e.dateiname ~ '" target="_blank" rel="noopener">● **' ~ zeit ~ '** — Bewegung erkannt</a>'] %}
+              {% endfor %}
+              {{ ns.lines | join('\n\n│\n\n') }}
+              {% endif %}
+            grid_options:
+              columns: full
+              rows: 4
+
+      - type: grid
+        cards:
+          - type: picture-entity
+            entity: camera.switchbot_outdoor_pan_tilt_cam_3k_secstream
+            name: Outdoor
+            show_state: false
+            grid_options:
+              columns: full
+              rows: 4
+          - type: markdown
+            title: Ereignisse Outdoor
+            content: >
+              {% set events = (state_attr('sensor.kamera_ereignisse', 'events') or [])
+                 | selectattr('kamera', 'eq', 'outdoor') | list %}
               {% if events | length == 0 %}
               _Noch keine Ereignisse aufgezeichnet._
               {% else %}
@@ -182,23 +239,38 @@ views:
                         name: Tamper
                       - entity: sensor.haustur_batterie
                         name: Batterie
+                  # Studio (2026-08-29): 6. Kontaktsensor, in CLAUDE.md-Inventar
+                  # bislang nicht gelistet. Entity-ID kam generisch als
+                  # "contact_sensor_4_*" aus dem Tuya-Pairing und wurde analog
+                  # zu den anderen Türen auf "studio_*" umbenannt (Container-
+                  # Stopp + direkter core.entity_registry-Edit, gleiches
+                  # Verfahren wie bei Bluetooth-Phantom/bitShake-Umbenennung).
+                  - type: entities
+                    title: Studio
+                    entities:
+                      - entity: binary_sensor.studio_tur
+                        name: Tür
+                      - entity: binary_sensor.studio_tamper
+                        name: Tamper
+                      - entity: sensor.studio_batterie
+                        name: Batterie
+                  # Haustür Wannsee (2026-09-02): Ursache für das monatelange
+                  # Fehlen war keine physische Pairing-Blockade, sondern zwei
+                  # getrennte Tuya-Konten (Dresden: E-Mail-Login, Wannsee:
+                  # "Bei Apple anmelden" - von Tuya als eigenständiges Konto
+                  # behandelt). Fix: Gerät im Wannsee-Konto per Tuya-eigenem
+                  # "Gerät teilen" ans Dresden-Konto freigegeben, danach im
+                  # Tuya-Cloud-Projekt (iot.tuya.com) neu verknüpft und die
+                  # HA-Tuya-Integration neu geladen - kein Entity-Rename nötig,
+                  # kam schon sauber als "haustur_wannsee_*" an. KEIN Tamper-
+                  # Sensor bei diesem Gerät (anderes Sensor-Modell als die
+                  # Dresdner Türen), daher nur Tür + Batterie.
                   - type: entities
                     title: Haustür Wannsee
                     entities:
-                      - entity: binary_sensor.haustur_wannsee
+                      - entity: binary_sensor.haustur_wannsee_tur
                         name: Tür
-                      - entity: binary_sensor.haustur_wannsee_tamper
-                        name: Tamper
                       - entity: sensor.haustur_wannsee_batterie
-                        name: Batterie
-                  - type: entities
-                    title: Wintergarten
-                    entities:
-                      - entity: binary_sensor.wintergarten_tur
-                        name: Tür
-                      - entity: binary_sensor.wintergarten_tamper
-                        name: Tamper
-                      - entity: sensor.wintergarten_batterie
                         name: Batterie
               - type: logbook
                 title: Ereignisse Türkontakte
@@ -210,7 +282,6 @@ views:
                   - binary_sensor.eingangstur_tamper
                   - binary_sensor.haustur_tur
                   - binary_sensor.haustur_tamper
-                  - binary_sensor.haustur_wannsee
-                  - binary_sensor.haustur_wannsee_tamper
-                  - binary_sensor.wintergarten_tur
-                  - binary_sensor.wintergarten_tamper
+                  - binary_sensor.studio_tur
+                  - binary_sensor.studio_tamper
+                  - binary_sensor.haustur_wannsee_tur

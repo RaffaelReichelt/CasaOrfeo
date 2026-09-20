@@ -15,7 +15,7 @@ services:
       - /etc/localtime:/etc/localtime:ro
     restart: unless-stopped
     privileged: true
-    ports:
+    ports:                                        
       - "8123:8123"
     # network_mode: host
 
