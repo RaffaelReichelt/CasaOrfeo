@@ -1,0 +1,160 @@
+# =====================================================================
+# LOVELACE-DASHBOARD "Heizung" (neu, 2026-09-26)
+# Läuft wie die anderen Dashboards direkt von der Platte über den
+# dashboards/-Verzeichnis-Mount (siehe CLAUDE.md für den Hintergrund zum
+# Verzeichnis- vs. Einzeldatei-Mount-Fallstrick). Bearbeiten + Browser-
+# Reload genügt, kein Neustart nötig.
+#
+# AUSGANGSLAGE bei Erstellung, per core.device_registry/core.entity_registry
+# verifiziert (nie angenommen, siehe CLAUDE.md-Umlaut-/Entity-ID-Fallstrick):
+# Alle 9 Zigbee-Heizkörperthermostate (SLZB-06/Zigbee2MQTT) sind bereits
+# gepairt - der "Priorisierter Fahrplan"-Punkt 2 in CLAUDE.md ist also
+# weiter fortgeschritten als dort vermerkt, sollte dort nachgezogen werden.
+# ABER: In Zigbee2MQTT selbst tragen alle 9 Geräte weiterhin nur ihre rohe
+# IEEE-Adresse als friendly_name (zigbee2mqtt/data/configuration.yaml) -
+# die sprechenden Namen/Raumzuordnungen unten kommen ausschließlich aus dem
+# HA-Device-Registry (device.name je Gerät dort gepflegt, nicht in Z2M).
+# Deshalb überall "name:"-Override in den Karten, sonst zeigt die
+# Kartenüberschrift die kryptische 0x...-Adresse.
+#
+# Zuordnung (device_registry, 2026-09-26 verifiziert):
+#   climate.0x7cc6b6fffe349610  -> Studio
+#   climate.0x28dba7fffe0455cd  -> Küche
+#   climate.0xc09b9efffeabfda3  -> Esszimmer
+#   climate.0x0ceff6fffe84fd14  -> Klavierzimmer rechts
+#   climate.0x7cc6b6fffe0b7424  -> Klavierzimmer links
+#   climate.0x0ceff6fffe8506eb  -> Badezimmer
+#   climate.0x28dba7fffe736500  -> Wohnzimmer rechts
+#   climate.0x0ceff6fffe8ef109  -> Wohnzimmer links
+#   climate.0x7cc6b6fffe0bbb3b  -> Schlafzimmer (roher TRV)
+#
+# SONDERFALL SCHLAFZIMMER, bislang nirgends in CLAUDE.md dokumentiert:
+# Für den Schlafzimmer-TRV läuft zusätzlich die HACS-Integration "Better
+# Thermostat" (config_entry, per core.config_entries geprüft) - sie steuert
+# climate.0x7cc6b6fffe0bbb3b im Hintergrund an, nutzt aber
+# sensor.wetterstation_indoor_temperature/_humidity (Tuya-Wetterstation)
+# statt des TRV-eigenen (typischerweise ungenauen) Innenfühlers als
+# Ist-Temperatur, plus sensor.innen_aussen_temperatur als Außenreferenz und
+# weather.forecast_home_2 für die Vorhersage-Logik. Die daraus entstehende
+# virtuelle Entity climate.temperatur_schlafzimmer ist deshalb unten die
+# EINZIGE Karte für Schlafzimmer - der rohe TRV bekommt bewusst KEINE
+# eigene Karte, um nicht zwei unabhängige Regler auf demselben Ventil zu
+# haben (Solltemperatur würde sonst gegeneinander laufen).
+#
+# Nicht alle Diagnose-Entities pro TRV sind hier verdrahtet (u.a. Ventil-
+# Kalibrierwerte, Wochenplan-Text-Entities, Frostschutz) - bei Bedarf
+# einzeln über die Geräteseite in den HA-Einstellungen erreichbar, hier
+# bewusst nur die im Alltag relevanten Werte (Regelung, Temperatur,
+# Batterie, Fenster-/Kindersicherungsstatus).
+# =====================================================================
+
+title: Heizung
+views:
+  - title: Heizung
+    path: heizung
+    icon: mdi:radiator
+    cards:
+      # Schneller Überblick, welche Batterie als nächstes fällig ist -
+      # ohne dafür jede einzelne Thermostat-Karte aufklappen zu müssen.
+      - type: entities
+        title: Batteriestatus
+        entities:
+          - entity: sensor.0x7cc6b6fffe349610_battery
+            name: Studio
+          - entity: sensor.0x28dba7fffe0455cd_battery
+            name: Küche
+          - entity: sensor.0xc09b9efffeabfda3_battery
+            name: Esszimmer
+          - entity: sensor.0x0ceff6fffe84fd14_battery
+            name: Klavierzimmer rechts
+          - entity: sensor.0x7cc6b6fffe0b7424_battery
+            name: Klavierzimmer links
+          - entity: sensor.0x0ceff6fffe8506eb_battery
+            name: Badezimmer
+          - entity: sensor.0x28dba7fffe736500_battery
+            name: Wohnzimmer rechts
+          - entity: sensor.0x0ceff6fffe8ef109_battery
+            name: Wohnzimmer links
+          - entity: sensor.0x7cc6b6fffe0bbb3b_battery
+            name: Schlafzimmer
+
+      # Pro Raum eine native Thermostat-Karte (Ist-/Solltemperatur, Modus-
+      # Umschaltung per Klick auf das Rad). 3-Spalten-Grid statt 9 Einzel-
+      # karten untereinander, damit alle Räume ohne Scrollen sichtbar sind.
+      - type: grid
+        columns: 3
+        square: false
+        cards:
+          - type: thermostat
+            entity: climate.0x28dba7fffe0455cd
+            name: Küche
+          - type: thermostat
+            entity: climate.0xc09b9efffeabfda3
+            name: Esszimmer
+          - type: thermostat
+            entity: climate.0x0ceff6fffe84fd14
+            name: Klavierzimmer rechts
+          - type: thermostat
+            entity: climate.0x7cc6b6fffe0b7424
+            name: Klavierzimmer links
+          - type: thermostat
+            entity: climate.0x0ceff6fffe8506eb
+            name: Badezimmer
+          - type: thermostat
+            entity: climate.0x28dba7fffe736500
+            name: Wohnzimmer rechts
+          - type: thermostat
+            entity: climate.0x0ceff6fffe8ef109
+            name: Wohnzimmer links
+          # Better-Thermostat-Wrapper statt des rohen TRV, siehe Kommentar
+          # oben - bewusst die einzige Schlafzimmer-Karte.
+          - type: thermostat
+            entity: climate.temperatur_schlafzimmer
+            name: Schlafzimmer
+          - type: thermostat
+            entity: climate.0x7cc6b6fffe349610
+            name: Studio
+
+      # Fenster-auf-Erkennung + Kindersicherung je Ventil - beides schaltet
+      # die Heizung des jeweiligen Ventils ab, bleibt in der Thermostat-
+      # Karte selbst aber unsichtbar (nur über den Zahnrad-Dialog erreichbar)
+      # - deshalb hier explizit als eigene Übersicht.
+      - type: entities
+        title: Fenster & Kindersicherung
+        entities:
+          - entity: switch.0x7cc6b6fffe349610_open_window
+            name: Studio – Fenster offen
+          - entity: switch.0x7cc6b6fffe349610_child_lock
+            name: Studio – Kindersicherung
+          - entity: switch.0x28dba7fffe0455cd_open_window
+            name: Küche – Fenster offen
+          - entity: switch.0x28dba7fffe0455cd_child_lock
+            name: Küche – Kindersicherung
+          - entity: switch.0xc09b9efffeabfda3_open_window
+            name: Esszimmer – Fenster offen
+          - entity: switch.0xc09b9efffeabfda3_child_lock
+            name: Esszimmer – Kindersicherung
+          - entity: switch.0x0ceff6fffe84fd14_open_window
+            name: Klavierzimmer rechts – Fenster offen
+          - entity: switch.0x0ceff6fffe84fd14_child_lock
+            name: Klavierzimmer rechts – Kindersicherung
+          - entity: switch.0x7cc6b6fffe0b7424_open_window
+            name: Klavierzimmer links – Fenster offen
+          - entity: switch.0x7cc6b6fffe0b7424_child_lock
+            name: Klavierzimmer links – Kindersicherung
+          - entity: switch.0x0ceff6fffe8506eb_open_window
+            name: Badezimmer – Fenster offen
+          - entity: switch.0x0ceff6fffe8506eb_child_lock
+            name: Badezimmer – Kindersicherung
+          - entity: switch.0x28dba7fffe736500_open_window
+            name: Wohnzimmer rechts – Fenster offen
+          - entity: switch.0x28dba7fffe736500_child_lock
+            name: Wohnzimmer rechts – Kindersicherung
+          - entity: switch.0x0ceff6fffe8ef109_open_window
+            name: Wohnzimmer links – Fenster offen
+          - entity: switch.0x0ceff6fffe8ef109_child_lock
+            name: Wohnzimmer links – Kindersicherung
+          - entity: switch.0x7cc6b6fffe0bbb3b_open_window
+            name: Schlafzimmer – Fenster offen
+          - entity: switch.0x7cc6b6fffe0bbb3b_child_lock
+            name: Schlafzimmer – Kindersicherung

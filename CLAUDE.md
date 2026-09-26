@@ -104,7 +104,9 @@ Zwei physische Standorte mit eigener Hardware:
 - **Empfohlener Stack:** Zigbee2MQTT (statt ZHA) wegen ausgereifterer Ventilsteuerung/Kalibrierung bei Thermostaten
 - Benötigt: Mosquitto-Container (MQTT-Broker) + Zigbee2MQTT-Container im selben Docker-Netzwerk
 - Verbindung zum Koordinator über `socket://<IP-der-SLZB-06>:6638`, feste IP/DHCP-Reservierung empfohlen
-- **To-do:** Nach Pairing alle 9 Thermostate kalibrieren (Ventilstellung, Temperatur-Offset)
+- **Stand 2026-09-26: alle 9 bereits gepairt** (per `core.device_registry`/`core.entity_registry` verifiziert, nie angenommen) — der Fahrplan-Punkt unten war veraltet. Namen/Raumzuordnung stehen im HA-Device-Registry (`device.name`), **nicht** in Zigbee2MQTT selbst — dort tragen alle 9 weiterhin nur ihre rohe IEEE-Adresse als `friendly_name` (`zigbee2mqtt/data/configuration.yaml`), z.B. `climate.0x28dba7fffe0455cd` = Küche. Bei künftigen Z2M-Neustarts/Re-Discovery-Aktionen also nicht von fehlenden Klarnamen in Z2M irritieren lassen — die eigentliche Zuordnung lebt in HA. Vollständige Liste: Studio (`0x7cc6b6fffe349610`), Küche (`0x28dba7fffe0455cd`), Esszimmer (`0xc09b9efffeabfda3`), Klavierzimmer rechts (`0x0ceff6fffe84fd14`), Klavierzimmer links (`0x7cc6b6fffe0b7424`), Badezimmer (`0x0ceff6fffe8506eb`), Wohnzimmer rechts (`0x28dba7fffe736500`), Wohnzimmer links (`0x0ceff6fffe8ef109`), Schlafzimmer (`0x7cc6b6fffe0bbb3b`). Dashboard: [dashboards/heizung_dashboard.yaml](dashboards/heizung_dashboard.yaml) (neu, 2026-09-26).
+- **Kalibrierungsstand unklar/nicht geprüft** — ob die Ventile bereits kalibriert sind (Ventilstellung, Temperatur-Offset), wurde bei diesem Fund nicht verifiziert, nur dass sie gepairt und ansprechbar sind. Als offen stehen lassen, bis explizit geprüft.
+- **Schlafzimmer läuft zusätzlich über HACS "Better Thermostat"** (`config_entry`, bislang nirgends in diesem Dokument erwähnt) — wrapped `climate.0x7cc6b6fffe0bbb3b` und ersetzt dessen eigenen (typischerweise ungenauen) Innenfühler durch `sensor.wetterstation_indoor_temperature`/`_humidity` (Tuya-Wetterstation) als Ist-Temperatur, plus `sensor.innen_aussen_temperatur` als Außenreferenz und `weather.forecast_home_2` für die Vorhersagelogik. Die daraus entstehende virtuelle Entity `climate.temperatur_schlafzimmer` ist die einzige Regel-Entity für dieses Zimmer — der rohe TRV darf **nicht** zusätzlich direkt angesteuert werden (zwei unabhängige Regler auf demselben Ventil würden sich gegenseitig überschreiben). Erstellt 2026-09-21, ob/wann die übrigen 8 TRVs auf dasselbe Muster umgestellt werden sollen, ist offen.
 
 ### Philips Hue
 - Hue-Lampen am Hauptstandort + **Hue Bridge Pro in Wannsee** (Sicherheitsfunktion aktiv, inkl. Bewegungs-/Kontaktsensoren)
@@ -188,7 +190,7 @@ Zwei physische Standorte mit eigener Hardware:
 
 ## Priorisierter Fahrplan
 1. Docker-Compose-Stack neu aufsetzen (HA + Mosquitto + Zigbee2MQTT), persistente Volumes
-2. SLZB-06 einbinden, 9 Thermostate pairen und kalibrieren
+2. ~~SLZB-06 einbinden, 9 Thermostate pairen~~ erledigt: alle 9 gepairt (siehe „Zigbee-Heizkörperthermostate"), **Kalibrierung weiterhin offen/ungeprüft**
 3. Hue-Bridges (beide Standorte) einbinden
 4. SwitchBot-Cloud-Integration einrichten (IR-Geräte, Pan/Tilt-Kamera)
 5. Samsung-TVs lokal einbinden
