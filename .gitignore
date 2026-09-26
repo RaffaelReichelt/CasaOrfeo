@@ -4,3 +4,4 @@
 mosquitto/data/
 mosquitto/log/
 zigbee2mqtt/data/
+tailscale/state/

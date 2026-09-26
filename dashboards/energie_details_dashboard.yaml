@@ -6,20 +6,27 @@
 # den Hintergrund zum Verzeichnis- vs. Einzeldatei-Mount). Bearbeiten +
 # Browser-Reload genügt, kein RAW-Editor-Copy-Paste mehr nötig.
 #
-# UMBAU 2026-09-20: Zurück auf den OBI Energy Tracker, nachdem der
-# bitShake-Zähler (2026-08-10 bis 2026-09-20 im Einsatz, siehe CLAUDE.md)
-# an einem Stromversorgungsproblem der Hardware selbst gescheitert ist.
-# Alle bitShake-spezifischen Karten (Momentanleistung, Differenz-je-
-# Messwert, Näherungsleistung, 10s-Auflösung, Ausreißer-Filter) sind damit
-# hinfällig, da sie auf inzwischen entfernten sensor.stromzaehler_*-
-# Entities beruhten - Karten unten zeigen wieder sensor.obi_* wie vor dem
-# bitShake-Umbau. WICHTIG: Die OBI-Integration selbst (custom_components/
-# obi_energy + Config-Entry) wurde am 2026-08-10 vollständig deinstalliert
-# und ist NICHT Teil dieses Reverts - muss vor Nutzung dieses Dashboards
-# manuell über HACS neu installiert + per Cloud-Login neu eingerichtet
-# werden, sonst bleiben die Karten leer. Die zugehörigen Wh-/"bereinigt"-
-# Template-Sensoren (sensor.obi_zaehlerstand_wh etc.) waren nie in Git
-# (config/ ist gitignored) und müssen bei Bedarf neu angelegt werden.
+# UMBAU 2026-09-20 (vormittags): Zurück auf OBI Energy Tracker - siehe Git-
+# Historie, überholt durch den nächsten Umbau direkt am selben Nachmittag.
+#
+# UMBAU 2026-09-20 (nachmittags), ZURÜCK AUF BITSHAKE: OBI erneut ausgebaut
+# (wiederkehrende Backend-Ausfälle wiegen schwerer als die umständliche
+# Stromversorgung der bitShake-Hardware, Nutzerentscheidung). Karten unten
+# entsprechen wieder dem letzten bekannt-guten bitShake-Stand (Git-Commit
+# bee4128, vor dem Vormittags-Revert). custom_components/obi_energy erneut
+# deinstalliert, Config-Entry/Entities aufgeräumt, .storage/energy zurück
+# auf sensor.stromzaehler_gesamt.
+#
+# UMBAU 2026-09-26: Gerät wieder in Betrieb (IP 192.168.2.225, jetzt
+# dauerhaft/reserviert). Die fünf rohen mqtt:-Sensoren in configuration.yaml
+# sind ergänzt (Feldpfade live von der Geräte-HTTP-API bestätigt) und neue
+# Karte unten mit Hochtarif/Niedertarif/Einspeisung, die es vorher nie gab.
+# WICHTIG, noch offen: Der Mosquitto-Port 1883 ist aktuell trotz laufendem
+# Broker von außen nicht erreichbar (Colima-SSH-Portforward-Fehler, siehe
+# ausführlichen Befund in configuration.yaml direkt über dem mqtt:-Block) -
+# alle sensor.stromzaehler_*-Karten bleiben deshalb bis zu einem Colima-
+# Neustart leer/"unavailable", sind aber korrekt verdrahtet und füllen sich
+# von selbst, sobald der Broker wieder erreichbar ist.
 # =====================================================================
 
 title: Energie-Details
@@ -33,49 +40,113 @@ views:
       - type: statistics-graph
         title: Stromverbrauch (5-Minuten-Auflösung)
         entities:
-          - sensor.obi_energy_bridge_verbrauch_kwh
+          - sensor.stromzaehler_gesamt
         period: 5minute
         stat_types:
           - state
         days_to_show: 7
-      # Ersetzt die alte "Momentanleistung"-Karte (sensor.obi_energy_bridge_
-      # aktuelle_leistung liefert dauerhaft keine Werte, siehe CLAUDE.md/
-      # Session-Historie 2026-08-09 - Bridge online, aber keine Impulse vom
-      # Zähler-Lesekopf mehr).
-      #
-      # 2026-08-09, drei Anläufe bis hierhin:
-      #  1. "change" direkt auf dem Rohsensor -> funktionierte, ABER die
-      #     einmalige Nachhol-Spitze nach dem 18h-Ausfall (~7,46 kWh auf
-      #     einen Schlag) verhagelte die Skala, solange sie im "letzte
-      #     Stunde"-Fenster lag.
-      #  2. Eigener Trigger-Sensor "sensor.obi_verbrauch_wh_bereinigt"
-      #     (configuration.yaml) gebaut, der Zeitlücken >20 Min auf 0 setzt.
-      #     Funktionierte anfangs, blieb aber zweimal reproduzierbar nach
-      #     ein paar Übergängen hängen (kein Trigger mehr, kein Fehler im
-      #     Log) - ungeklärter Bug, nicht weiter verfolgt.
-      #  3. ZURÜCK zu Lösung 1 ("change" auf dem Rohsensor): Die Nachhol-
-      #     Spitze ist inzwischen (mehrere Stunden her) sowieso außerhalb
-      #     jedes "letzte Stunde"-Fensters - der ganze Umweg über den
-      #     Custom-Sensor war nur nötig, SOLANGE die Spitze noch aktuell
-      #     war. Einfachste, robusteste Lösung gewinnt.
-      #  4. "unit: Wh" als Karten-Override versucht, um kWh->Wh anzuzeigen -
-      #     hat nicht funktioniert (Karte blieb bei kWh). Beim Nachlesen im
-      #     Frontend-Code stellte sich raus: dieses Feld sucht nur unter
-      #     bereits vorhandenen Einheiten mehrerer Entities nach einer
-      #     Übereinstimmung, rechnet nicht wirklich um. Stattdessen jetzt
-      #     "sensor.obi_zaehlerstand_wh" (configuration.yaml) - simpler
-      #     state-basierter Sensor, der den Zählerstand nativ in Wh führt,
-      #     kein Karten-Trick mehr nötig.
-      #
-      # "days_to_show" kennt kein Stunden-Pendant - 1/24 als Bruchteil
-      # eines Tages für "letzte Stunde" versucht; nicht offiziell
-      # dokumentiert, im Zweifel hochsetzen falls die Karte leer bleibt.
-      - type: statistics-graph
-        title: Verbrauch letzte Stunde (Differenz zum letzten Messpunkt)
-        chart_type: bar
+
+      # Zählerstände im Überblick (neu 2026-09-26) - Hochtarif/Niedertarif/
+      # Einspeisung gab es als eigene Karte vorher nie, obwohl die
+      # zugehörigen MQTT-Sensoren schon seit dem ursprünglichen Setup
+      # existieren. Einfache Entities-Karte statt Statistics-Graph, da hier
+      # der aktuelle Stand interessiert, nicht der Zeitverlauf (den zeigt
+      # die Kurve oben bereits für Gesamt).
+      - type: entities
+        title: Zählerstände
         entities:
-          - sensor.obi_zahlerstand_wh
+          - entity: sensor.stromzaehler_gesamt
+            name: Gesamt
+          - entity: sensor.stromzaehler_hochtarif
+            name: Hochtarif
+          - entity: sensor.stromzaehler_niedertarif
+            name: Niedertarif
+          - entity: sensor.stromzaehler_einspeisung
+            name: Einspeisung
+
+      # Momentanleistung: sensor.stromzaehler_leistung liegt technisch bereit
+      # (bitShake-Zähler liefert MT174.Power alle 10s), zeigt aber durchgehend
+      # 0 W. Grund: die "erweiterte" SML-Datensatzvariante mit echter
+      # Momentanleistung ist beim Messstellenbetreiber PIN-gesperrt (nur der
+      # öffentliche Teil mit den kumulierten Zählerständen ist ohne PIN
+      # lesbar) - kein Bug, PIN-Aktivierung steht weiterhin aus. Karte bleibt
+      # stehen: sobald der PIN aktiviert ist, füllt sie sich ohne weitere
+      # Dashboard-Änderung.
+      - type: history-graph
+        title: Momentanleistung
+        entities:
+          - sensor.stromzaehler_leistung
+        hours_to_show: 3
+
+      # "Verbrauch letzte Stunde": echte Kurve mit ~10s-Auflösung statt
+      # aggregierter 5-Minuten-Statistik-Buckets (HAs Kurzzeit-Statistik kann
+      # nicht feiner - feste Grenze im Recorder). sensor.stromzahler_
+      # differenz_pro_messwert (configuration.yaml, statistics-Sensor,
+      # state_characteristic: change, sampling_size: 2) vergleicht bei jedem
+      # neuen Messwert nur den aktuellen mit dem direkt vorherigen -
+      # rohe Differenz zwischen zwei aufeinanderfolgenden ~10s-Ticks.
+      # history-graph statt statistics-graph, da die Rohwerte interessieren,
+      # nicht aggregierte Statistik-Buckets. Zeigt sensor.stromzahler_
+      # differenz_bereinigt (Wertgrenzen-Filter-Template, 50 Wh/Tick) statt
+      # der rohen Statistics-Entity direkt, wegen des dokumentierten Anlauf-
+      # Ausreißers direkt nach einem HA-Neustart (leerer Sample-Puffer).
+      - type: history-graph
+        title: Verbrauch – Differenz je Messwert (~10s)
+        entities:
+          - sensor.stromzahler_differenz_bereinigt
+        hours_to_show: 1
+
+      # "Näherungsleistung" - Watt-Näherung aus der Wh-Differenz zwischen
+      # zwei Messwerten mit der ECHTEN Zeitdifferenz zwischen den Ticks
+      # (sensor.stromzahler_wh_pro_sekunde, state_characteristic:
+      # change_second, *3600 in sensor.stromzahler_naherungsleistung,
+      # siehe configuration.yaml). Solange die echte Momentanleistung (Karte
+      # oben) PIN-gesperrt ist, gibt das eine ungefähre Vorschau - kein
+      # Ersatz für die echte Augenblicksmessung, sondern eine über das
+      # jeweilige Tick-Intervall gemittelte Näherung.
+      - type: history-graph
+        title: Näherungsleistung (aus Wh-Differenz)
+        entities:
+          - sensor.stromzahler_naherungsleistung
+        hours_to_show: 1
+
+      # SwitchBot-Steckdosen (seit 2026-09-19 im Einsatz, 4 Stück), Integration
+      # switchbot_cloud, verifiziert per core.entity_registry (2026-09-20).
+      # Kein area_id zugewiesen -> Kartentitel/Namen nutzen die SwitchBot-
+      # Gerätenamen 1:1. "Klvierzimmer" (fehlendes "a") und "Mini (EU) 3A"
+      # (generischer SwitchBot-Modellname statt Raumbezeichnung) kommen so
+      # aus der SwitchBot-App/Cloud - nicht korrigiert, da außerhalb dieses
+      # Dashboard-Umbaus; bei Bedarf Device in HA umbenennen.
+      - type: entities
+        title: SwitchBot-Steckdosen – Live-Leistung
+        entities:
+          - entity: switch.steckdose_klvierzimmer
+            name: Klavierzimmer
+          - entity: sensor.steckdose_klvierzimmer_leistung
+            name: Klavierzimmer – Leistung
+          - entity: switch.steckdose_esszimmer
+            name: Esszimmer
+          - entity: sensor.steckdose_esszimmer_leistung
+            name: Esszimmer – Leistung
+          - entity: switch.steckdose_avantgarde
+            name: Avantgarde
+          - entity: sensor.steckdose_avantgarde_leistung
+            name: Avantgarde – Leistung
+          - entity: switch.steckdose_mini_eu_3a
+            name: Mini (EU) 3A
+          - entity: sensor.steckdose_mini_eu_3a_leistung
+            name: Mini (EU) 3A – Leistung
+      # Gleiches Muster wie die OBI-Verbrauchskarte oben (period/stat_types/
+      # days_to_show) - alle vier Energie-Sensoren zum direkten Vergleich in
+      # einer Grafik statt vier Einzelkarten.
+      - type: statistics-graph
+        title: SwitchBot-Steckdosen – Energieverbrauch (kWh, 5-Minuten-Auflösung)
+        entities:
+          - sensor.steckdose_klvierzimmer_energie
+          - sensor.steckdose_esszimmer_energie
+          - sensor.steckdose_avantgarde_energie
+          - sensor.steckdose_mini_eu_3a_energie
         period: 5minute
         stat_types:
-          - change
-        days_to_show: 0.0417
+          - state
+        days_to_show: 7

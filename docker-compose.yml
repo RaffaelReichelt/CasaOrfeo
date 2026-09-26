@@ -28,7 +28,7 @@ services:
       - TS_STATE_DIR=/var/lib/tailscale
       - TS_EXTRA_ARGS=--reset --accept-dns=false
     volumes:
-      - tailscale-state:/var/lib/tailscale
+      - ./tailscale/state:/var/lib/tailscale
       - /dev/net/tun:/dev/net/tun
     cap_add:
       - NET_ADMIN
@@ -60,6 +60,3 @@ services:
       - /etc/localtime:/etc/localtime:ro
     ports:
       - "8099:8080"
-
-volumes:
-  tailscale-state:
